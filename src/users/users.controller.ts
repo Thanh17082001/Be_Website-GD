@@ -3,6 +3,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePassDto } from './dto/change-pass-dto';
+import { Public } from 'src/auth/auth.decorator';
 
 @Controller('users')
 export class UsersController {
@@ -32,6 +33,7 @@ async changePassword(@Body() dto: ChangePassDto) {
 }
 
   @Post()
+  @Public()
   create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
   }

@@ -5,9 +5,22 @@ import configuration from 'src/config/configuration';
 import { ExamplesModule } from './examples/examples.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { RoleModule } from './role/role.module';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthGuard } from './auth/auth.guard';
+import { JwtModule } from '@nestjs/jwt';
+import { PostModule } from './post/post.module';
+import { GradeModule } from './grade/grade.module';
+import { SubjectsModule } from './subjects/subjects.module';
+import { ClassModule } from './class/class.module';
 
 @Module({
   imports: [
+    JwtModule.register({
+      global: true,
+      secret: 'thienthanh132',
+      signOptions: { expiresIn: '60m' },
+    }),
     ConfigModule.forRoot({
       load: [configuration],
       isGlobal: true,
@@ -35,9 +48,14 @@ import { AuthModule } from './auth/auth.module';
           console.log(error);
         }
       },
-    }), ExamplesModule, UsersModule, AuthModule
+    }), ExamplesModule, UsersModule, AuthModule, RoleModule, PostModule, GradeModule, SubjectsModule, ClassModule
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD, // Đăng ký AuthGuard cho tất cả các route
+      useClass: AuthGuard,
+    },
+  ],
 })
 export class AppModule {}

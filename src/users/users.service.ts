@@ -97,7 +97,7 @@ export class UsersService {
     const user = await this.repo.findOne({where: {id}})
 
     if(!user) {
-      throw new NotFoundException(`Khong6 tìm thấy người dùng với ID: ${id}`)
+      throw new NotFoundException(`Không tìm thấy người dùng với ID: ${id}`)
     }
 
     return user

@@ -1,9 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { BaseWithCreatedBy } from "src/common/entities/base-user-createdBy";
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+
 
 @Entity()
-export class User {
-    @PrimaryGeneratedColumn() 
-    id: number;
+export class User extends BaseWithCreatedBy {
 
     @Column()
     fullName: string;
@@ -17,4 +17,7 @@ export class User {
     isAdmin: boolean;
     @Column()
     role: string;
+
+    @ManyToOne(() => User, { nullable: true, onDelete: "SET NULL" })
+    createdBy?: User
 }
