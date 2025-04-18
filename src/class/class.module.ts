@@ -4,9 +4,10 @@ import { ClassController } from './class.controller';
 import { GradeModule } from 'src/grade/grade.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Class } from './entities/class.entity';
+import { Product } from 'src/product/entities/product.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Class]), GradeModule],
+  imports: [TypeOrmModule.forFeature([Class, Product]), GradeModule],
   controllers: [ClassController],
   providers: [ClassService],
   exports: [ClassService,TypeOrmModule],

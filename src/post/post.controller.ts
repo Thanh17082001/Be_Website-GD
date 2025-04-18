@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, Query, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -9,6 +9,9 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { Roles } from 'src/role/role.decorator';
 import { Role } from 'src/role/role.enum';
 import { PageOptionsDto } from 'src/common/pagination/page-option-dto';
+import { ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { multerOptions, storage } from 'src/config/multer';
 
 @Controller('post')
 @UseGuards(AuthGuard)
@@ -17,10 +20,14 @@ export class PostController {
 
   @Post()
   @Roles(Role.ADMIN)
-  create(@Body() createPostDto: CreatePostDto, @Req() request: Request) {
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('image', { storage: storage('post', true), ...multerOptions }))
+  create(@UploadedFile() image: Express.Multer.File,@Body() createPostDto: CreatePostDto, @Req() request: Request) {
+    // console.log('Image:', image);
+    // console.log('Body:', createPostDto);
     const user: User = request['user'] ?? null;
-    console.log(user)
-    return this.postService.create(createPostDto, user); 
+    const filePath = `public/post/image/${image.filename}`;
+    return this.postService.create({...createPostDto, image: filePath}, user); 
   }
 
   @Get()

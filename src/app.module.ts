@@ -13,9 +13,16 @@ import { PostModule } from './post/post.module';
 import { GradeModule } from './grade/grade.module';
 import { SubjectsModule } from './subjects/subjects.module';
 import { ClassModule } from './class/class.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+import { ProductModule } from './product/product.module';
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'), // Gốc thư mục chứa file tĩnh
+      serveRoot: '/api/public', // Đường dẫn để client truy cập
+    }),
     JwtModule.register({
       global: true,
       secret: 'thienthanh132',
@@ -48,7 +55,7 @@ import { ClassModule } from './class/class.module';
           console.log(error);
         }
       },
-    }), ExamplesModule, UsersModule, AuthModule, RoleModule, PostModule, GradeModule, SubjectsModule, ClassModule
+    }), ExamplesModule, UsersModule, AuthModule, RoleModule, PostModule, GradeModule, SubjectsModule, ClassModule, ProductModule
   ],
   controllers: [],
   providers: [

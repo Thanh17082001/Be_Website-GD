@@ -3,12 +3,19 @@ import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity() // Đảm bảo có decorator @Entity
 export class Post extends BaseWithCreatedBy{
-  @PrimaryGeneratedColumn()
-  id: number;
+
+  @Column()
+  name: string;
 
   @Column()
   title: string;
 
   @Column()
   content: string;
+
+  @Column()
+  image: string;
+
+  @Column()
+  description: string;
 }
