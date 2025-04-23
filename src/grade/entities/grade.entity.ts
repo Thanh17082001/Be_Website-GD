@@ -1,3 +1,4 @@
+import { Category } from "src/categories/entities/category.entity";
 import { Class } from "src/class/entities/class.entity";
 import { BaseWithCreatedBy } from "src/common/entities/base-user-createdBy";
 import { Product } from "src/product/entities/product.entity";
@@ -23,4 +24,7 @@ export class Grade extends BaseWithCreatedBy{
     @ManyToMany(() => TypeProduct, (typeProduct) => typeProduct.grades)
     @JoinTable()
     typeProducts: TypeProduct[];
+
+    @ManyToMany(() => Category, (category) => category.grades)
+    categories: Category[];
 }

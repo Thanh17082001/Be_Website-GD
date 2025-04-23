@@ -14,5 +14,11 @@ export class CreateCategoryDto extends OmitType(BaseDto, [] as const){
         @ArrayNotEmpty()
         @IsNumber({}, { each: true }) 
         @Type(() => Number) 
-        productIds: number[];
+        products: number[];
+
+        @ApiProperty({ type: [Number], required: false }) // Cho phép optional
+        @IsArray()
+        @IsNumber({}, { each: true })
+        @Type(() => Number)
+        grades?: number[];
 }

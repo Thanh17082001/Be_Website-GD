@@ -34,12 +34,7 @@ export class ProductController {
     @UploadedFiles() files: Express.Multer.File[],
     
   ) {
-    // console.log(createProductDto.classes)
-    // console.log(JSON.parse(createProductDto.subjectIds))
-    // console.log(files)
     const user: User = request['user'];
-    // console.log(user)
-    // Gán mảng file tên ảnh vào DTO
     // createProductDto.subjects = JSON.parse(createProductDto.subjects as any);
     // createProductDto.classes = JSON.parse(createProductDto.classes as any);
     createProductDto.categoryIds = JSON.parse(createProductDto.categoryIds as any);

@@ -31,7 +31,8 @@ export class GradeService {
       .leftJoinAndSelect('grade.typeProducts', 'typeProducts')
       .leftJoinAndSelect('grade.subjects', 'subjects')
       .leftJoinAndSelect('grade.classes', 'classes')
-      .leftJoinAndSelect('grade.products', 'products');
+      .leftJoinAndSelect('grade.products', 'products')
+      .innerJoinAndSelect('grade.categories', 'categories');
     const { page, limit, skip, order, search } = pageOptions;
     const pagination: string[] = ['page', 'limit', 'skip', 'order', 'search']
 
@@ -68,7 +69,7 @@ export class GradeService {
 
     const example = await this.repo.findOne({
       where: { id },
-      relations: ['typeProducts', 'products', 'subjects', 'classes'],
+      relations: ['typeProducts', 'products', 'subjects', 'classes', 'categories'],
     });
     if (!example) {
       throw new HttpException('Not found', 404);
