@@ -15,18 +15,22 @@ export class ClassService {
   constructor(
     @InjectRepository(Class) private repo: Repository<Class>,
     @InjectRepository(Grade) private repoGrade: Repository<Grade>,
-  ){}
-  async create(createClassDto: CreateClassDto, user: User){
-    const { name, gradeId } = createClassDto;
+  ) { }
+  async create(createClassDto: CreateClassDto, user: User) {
+    const { name, grade } = createClassDto;
     if (await this.repo.findOne({ where: { name } })) {
       throw new HttpException('Tên đã tồn tại', 409);
     }
-    const grade: Grade = await this.repoGrade.findOne({ where: { id: gradeId } });
-    if (!grade) {
+    const checkGrade: Grade = await this.repoGrade.findOne({ where: { id: grade } });
+    if (!checkGrade) {
       throw new HttpException('Khối không tồn tại', 409);
     }
-    console.log(grade)
-    const newClass = this.repo.create({ ...createClassDto, name: name, grade, createdBy: user.isAdmin ? user : null });
+    // console.log(grade)
+    const newClass = {
+      name,
+      grade: checkGrade,
+      createdBy: user?.isAdmin ? user : null,
+    }
     return await this.repo.save(newClass);
   }
 
@@ -38,12 +42,14 @@ export class ClassService {
     const queryBuilder = this.repo
       .createQueryBuilder('class')
       .leftJoinAndSelect('class.grade', 'grade')
-      .leftJoinAndSelect('class.createdBy', 'createdBy');
+      .leftJoinAndSelect('class.createdBy', 'createdBy')
+      .leftJoinAndSelect('class.products', 'products') // 👈 Join sản phẩm
+      .leftJoinAndSelect('class.subjects', 'subjects');
 
-      const { page, limit, skip, order, search } = pageOptions;
-      const pagination: string[] = ['page', 'limit', 'skip', 'order', 'search'];
+    const { page, limit, skip, order, search } = pageOptions;
+    const pagination: string[] = ['page', 'limit', 'skip', 'order', 'search'];
 
-      // 🎯 Lọc theo các điều kiện cụ thể (trừ tham số phân trang)
+    // 🎯 Lọc theo các điều kiện cụ thể (trừ tham số phân trang)
     if (query && Object.keys(query).length > 0) {
       Object.keys(query).forEach((key) => {
         if (key && !pagination.includes(key)) {
@@ -75,7 +81,7 @@ export class ClassService {
 
   async findOne(id: number): Promise<ItemDto<Class>> {
 
-    const example = await this.repo.findOne({ where: { id }, relations: ['grade', 'createdBy'] });
+    const example = await this.repo.findOne({ where: { id }, relations: ['grade', 'createdBy', 'subjects', 'products'] });
     if (!example) {
       throw new HttpException('Not found', 404);
     }
@@ -83,7 +89,7 @@ export class ClassService {
   }
 
   async update(id: number, updateClassDto: UpdateClassDto) {
-    const { name,gradeId } = updateClassDto;
+    const { name, grade } = updateClassDto;
     const exampleExits: Class = await this.repo.findOne({ where: { name, id: Not(id) } });
     if (exampleExits) {
       throw new HttpException('Tên đã tồn tại', 409);
@@ -93,8 +99,8 @@ export class ClassService {
     if (!example) {
       throw new NotFoundException(`Class with ID ${id} not found`);
     }
-    const grade: Grade = await this.repoGrade.findOne({ where: { id: gradeId } });
-    if (!grade) {
+    const checkGrade: Grade = await this.repoGrade.findOne({ where: { id: grade } });
+    if (!checkGrade) {
       throw new HttpException('Lớp không tồn tại', 409);
     }
 

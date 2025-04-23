@@ -1,10 +1,13 @@
+import { Category } from "src/categories/entities/category.entity";
 import { Class } from "src/class/entities/class.entity";
 import { BaseWithCreatedBy } from "src/common/entities/base-user-createdBy";
 import { Grade } from "src/grade/entities/grade.entity";
-import { Column, Entity, ManyToOne } from "typeorm";
+import { Subject } from "src/subjects/entities/subject.entity";
+import { TypeProduct } from "src/type-products/entities/type-product.entity";
+import { Column, Entity, JoinTable, ManyToMany, ManyToOne } from "typeorm";
 
 @Entity()
-export class Product extends BaseWithCreatedBy{
+export class Product extends BaseWithCreatedBy {
     @Column()
     title: string
 
@@ -32,13 +35,18 @@ export class Product extends BaseWithCreatedBy{
     @ManyToOne(() => Grade, grade => grade.products, { nullable: true, onDelete: 'SET NULL' })
     grade: Grade;
 
-    @ManyToOne(() => Class, classEntity => classEntity.products, { nullable: true, onDelete: 'SET NULL' })
-    class: Class;
+    @ManyToMany(() => Class, classEntity => classEntity.products)
+    classes: Class[];
 
-    // @ManyToOne(() => Subject, subject => subject.products)
-    // subject: Subject;
+    @ManyToMany(() => Subject, subject => subject.products)
+    @JoinTable()
+    subjects: Subject[];
 
-    // @ManyToMany(() => Category, category => category.products)
-    // @JoinTable()
-    // categories: Category[];
+    @ManyToOne(() => TypeProduct, typeProduct => typeProduct.products, { nullable: true, onDelete: 'SET NULL' })
+    typeProduct: TypeProduct;
+
+
+    @ManyToMany(() => Category, category => category.products)
+    @JoinTable()
+    categories: Category[];
 }

@@ -8,22 +8,25 @@ import { Public } from 'src/auth/auth.decorator';
 import { Role } from 'src/role/role.enum';
 import { PageOptionsDto } from 'src/common/pagination/page-option-dto';
 import { Grade } from './entities/grade.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Controller('grade')
 @UseGuards(RoleGuard)
 export class GradeController {
-  constructor(private readonly gradeService: GradeService) {}
+  constructor(private readonly gradeService: GradeService) { }
 
   @Post()
   // @Roles(Role.ADMIN)
   @Public()
-  async create() {
+  async create( @Req() request: Request) {
     let createGradeDto: CreateGradeDto = new CreateGradeDto();
+    const user: User = request['user'] ?? null;
     let result = []
-    const names: string[] = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
+    // Danh sách các tên cấp học
+    const names: string[] = ['Mầm non', 'Tiểu học', 'THCS', 'THPT'];
     for (let i = 0; i < names.length; i++) {
       createGradeDto.name = names[i];
-      result.push(await this.gradeService.create(createGradeDto));
+      result.push(await this.gradeService.create(createGradeDto, user));
     }
     return result
   }

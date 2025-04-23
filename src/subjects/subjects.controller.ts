@@ -1,33 +1,51 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query } from '@nestjs/common';
 import { SubjectsService } from './subjects.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
+import { RoleGuard } from 'src/role/role.guard';
+import { User } from 'src/users/entities/user.entity';
+import { Roles } from 'src/role/role.decorator';
+import { Role } from 'src/role/role.enum';
+import { Public } from 'src/auth/auth.decorator';
+import { PageOptionsDto } from 'src/common/pagination/page-option-dto';
+import { Subject } from './entities/subject.entity';
 
 @Controller('subjects')
+@UseGuards(RoleGuard)
 export class SubjectsController {
-  constructor(private readonly subjectsService: SubjectsService) {}
+  constructor(private readonly subjectsService: SubjectsService) { }
 
   @Post()
-  create(@Body() createSubjectDto: CreateSubjectDto) {
-    return this.subjectsService.create(createSubjectDto);
+  @Roles(Role.ADMIN)
+  create(@Body() createSubjectDto: CreateSubjectDto, @Req() request: Request) {
+    const user: User = request['user'] ?? null;
+    return this.subjectsService.create(createSubjectDto, user);
   }
 
   @Get()
-  findAll() {
-    return this.subjectsService.findAll();
+  @Public()
+  async findAll(
+    @Query() pageOptionsDto: PageOptionsDto,
+    @Req() request: Request
+  ) {
+    const user = request['user'] ?? null;
+    return this.subjectsService.findAll(pageOptionsDto, user); // Không cần truyền user nếu không dùng
   }
 
   @Get(':id')
+  @Public()
   findOne(@Param('id') id: string) {
     return this.subjectsService.findOne(+id);
   }
 
   @Patch(':id')
+  @Public()
   update(@Param('id') id: string, @Body() updateSubjectDto: UpdateSubjectDto) {
     return this.subjectsService.update(+id, updateSubjectDto);
   }
 
   @Delete(':id')
+  @Public()
   remove(@Param('id') id: string) {
     return this.subjectsService.remove(+id);
   }

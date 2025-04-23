@@ -16,6 +16,9 @@ import { ClassModule } from './class/class.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { ProductModule } from './product/product.module';
+import { TypeProductsModule } from './type-products/type-products.module';
+import { CategoriesModule } from './categories/categories.module';
+import { ContactsModule } from './contacts/contacts.module';
 
 @Module({
   imports: [
@@ -55,7 +58,7 @@ import { ProductModule } from './product/product.module';
           console.log(error);
         }
       },
-    }), ExamplesModule, UsersModule, AuthModule, RoleModule, PostModule, GradeModule, SubjectsModule, ClassModule, ProductModule
+    }), ExamplesModule, UsersModule, AuthModule, RoleModule, PostModule, GradeModule, SubjectsModule, ClassModule, ProductModule, TypeProductsModule, CategoriesModule, ContactsModule
   ],
   controllers: [],
   providers: [

@@ -63,7 +63,7 @@ async function bootstrap() {
     new ValidationPipe({
       transform: true,
       whitelist: true,
-      disableErrorMessages: true
+      disableErrorMessages: false
     }),
   );
 

@@ -1,5 +1,6 @@
 import { BaseWithCreatedBy } from "src/common/entities/base-user-createdBy";
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import {Contact} from "src/contacts/entities/contact.entity"
+import { Column, Entity, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 
 
 @Entity()
@@ -18,6 +19,6 @@ export class User extends BaseWithCreatedBy {
     @Column()
     role: string;
 
-    @ManyToOne(() => User, { nullable: true, onDelete: "SET NULL" })
-    createdBy?: User
+    @OneToOne(() => Contact, (contact) => contact.user, { cascade: true })
+    address: Contact;
 }

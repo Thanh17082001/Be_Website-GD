@@ -9,5 +9,5 @@ export class CreateClassDto extends OmitType(BaseDto, [] as const){
 
     @ApiProperty()
     @IsNumber()
-    gradeId: number
+    grade: number
 } 

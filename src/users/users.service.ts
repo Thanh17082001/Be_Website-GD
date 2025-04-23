@@ -35,17 +35,17 @@ export class UsersService {
     })
     return user
   }
-  async changePassword(dto: ChangePassDto): Promise<User> {
-    const { userId, password, newPassword } = dto;
+  async changePassword(dto: ChangePassDto, user: User): Promise<User> {
+    const { password, newPassword } = dto;
 
     // 1️⃣ Tìm user theo `userId`
-    const user = await this.repo.findOne({ where: { id: +userId } });
-    if (!user) {
+    const checkUser = await this.repo.findOne({ where: { id: user.id } });
+    if (!checkUser) {
       throw new NotFoundException('User not found');
     }
 
     // 2️⃣ Kiểm tra mật khẩu cũ
-    const isMatch = await UserUtil.comparePassword(password, user.password);
+    const isMatch = await UserUtil.comparePassword(password, checkUser.password);
     if (!isMatch) {
       throw new BadRequestException('Mật khẩu cũ không chính xác');
     }

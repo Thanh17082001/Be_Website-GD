@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePassDto } from './dto/change-pass-dto';
 import { Public } from 'src/auth/auth.decorator';
+import { User } from './entities/user.entity';
 
 @Controller('users')
 export class UsersController {
@@ -26,10 +27,11 @@ export class UsersController {
 }
 
 @Post('change-password')
-async changePassword(@Body() dto: ChangePassDto) {
-    const { userId, password, newPassword } = dto;
-    const user = await this.userService.changePassword({ userId, password, newPassword });
-    return user;
+async changePassword(@Body() dto: ChangePassDto, @Req() request: Request) {
+    const { password, newPassword } = dto;
+    const user: User = request['user'] ?? null;
+    const changePass = await this.userService.changePassword({ ...dto }, user);
+    return changePass;
 }
 
   @Post()

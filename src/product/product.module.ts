@@ -7,10 +7,14 @@ import { Grade } from 'src/grade/entities/grade.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClassModule } from 'src/class/class.module';
 import { GradeModule } from 'src/grade/grade.module';
+import { Subject } from 'src/subjects/entities/subject.entity';
+import { TypeProduct } from 'src/type-products/entities/type-product.entity';
+import { Category } from 'src/categories/entities/category.entity';
+
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Product, Class, Grade]), 
+    TypeOrmModule.forFeature([Product, Class, Grade, Subject, TypeProduct, Category]), 
     ClassModule,  
     GradeModule,  
   ],

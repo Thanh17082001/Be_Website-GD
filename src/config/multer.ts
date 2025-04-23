@@ -6,7 +6,9 @@ import { normalizeString } from 'src/utils/normalize-string';
 
 export const storage = (folder: string, isSplit: boolean = false) =>
     diskStorage({
+        
         destination: (req, file, cb) => {
+            
             // Đường dẫn động được truyền từ controller thông qua biến folder
             // ngoài thư mục dist
             let uploadPath = path.join(__dirname, '..', '..', 'public', folder);
@@ -30,7 +32,7 @@ export const storage = (folder: string, isSplit: boolean = false) =>
             if (!existsSync(uploadPath)) {
                 mkdirSync(uploadPath, { recursive: true });
             }
-
+            
             cb(null, uploadPath); // Trả về đường dẫn lưu trữ
         },
         filename: (req, file, cb) => {
@@ -38,6 +40,7 @@ export const storage = (folder: string, isSplit: boolean = false) =>
             const randomName = randomNameFile(normalizeString(file.originalname).replace(ext, ''));
             cb(null, `${randomName}${ext}`);
           }
+          
     });
 
 export const multerOptions = {

@@ -7,23 +7,31 @@ import { Not, Repository } from 'typeorm';
 import { ItemDto, PageDto } from 'src/common/pagination/page.dto';
 import { PageOptionsDto } from 'src/common/pagination/page-option-dto';
 import { PageMetaDto } from 'src/common/pagination/page.metadata.dto';
+import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class GradeService {
   constructor(
     @InjectRepository(Grade) private repo: Repository<Grade>
-  ){}
-  async create(createGradeDto: CreateGradeDto): Promise<Grade> {
+  ) { }
+  async create(createGradeDto: CreateGradeDto, user: User): Promise<Grade> {
     const { name } = createGradeDto;
     if (await this.repo.findOne({ where: { name } })) {
       throw new HttpException('Tên đã tồn tại', 409);
     }
-    const newUser = this.repo.create({ name   });
+    const newUser = this.repo.create({
+      name,
+      createdBy: user
+    });
     return await this.repo.save(newUser);
   }
 
   async findAll(pageOptions: PageOptionsDto, query: Partial<Grade>): Promise<PageDto<Grade>> {
-    const queryBuilder = this.repo.createQueryBuilder('grade');
+    const queryBuilder = this.repo.createQueryBuilder('grade')
+      .leftJoinAndSelect('grade.typeProducts', 'typeProducts')
+      .leftJoinAndSelect('grade.subjects', 'subjects')
+      .leftJoinAndSelect('grade.classes', 'classes')
+      .leftJoinAndSelect('grade.products', 'products');
     const { page, limit, skip, order, search } = pageOptions;
     const pagination: string[] = ['page', 'limit', 'skip', 'order', 'search']
 
@@ -36,15 +44,12 @@ export class GradeService {
       });
     }
 
-    
-
     //search document
     if (search) {
       queryBuilder.andWhere(`LOWER(unaccent(grade.name)) ILIKE LOWER(unaccent(:search))`, {
         search: `%${search}%`,
       });
     }
-
 
     queryBuilder.orderBy(`grade.name`, 'ASC')
       .skip(skip)
@@ -61,7 +66,10 @@ export class GradeService {
 
   async findOne(id: number): Promise<ItemDto<Grade>> {
 
-    const example = await this.repo.findOne({ where: { id } });
+    const example = await this.repo.findOne({
+      where: { id },
+      relations: ['typeProducts', 'products', 'subjects', 'classes'],
+    });
     if (!example) {
       throw new HttpException('Not found', 404);
     }
