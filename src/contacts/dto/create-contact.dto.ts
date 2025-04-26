@@ -20,7 +20,8 @@ export class CreateContactDto extends OmitType(BaseDto, [] as const) {
     messages: string
 
     @ApiProperty({ required: false })
+    @IsString()
     @IsOptional()
     // @IsNumber()
-    userId?: number;
+    user?: string;
 }

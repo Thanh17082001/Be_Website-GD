@@ -21,11 +21,12 @@ export class TypeProductsController {
   @Post()
   @Roles(Role.ADMIN)
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('image', { storage: storage('type-product', true), ...multerOptions }))
-  create(@UploadedFile() image: Express.Multer.File, @Body() createTypeProductDto: CreateTypeProductDto, @Req() request: Request) {
+  @UseInterceptors(FileInterceptor('images', { storage: storage('type-product', true), ...multerOptions }))
+  create(@UploadedFile() images: Express.Multer.File, @Body() createTypeProductDto: CreateTypeProductDto, @Req() request: Request) {
+    // console.log(images)
     const user: User = request['user'] ?? null;
-    const filePath = `public/type-product/image/${image.filename}`;
-    return this.typeProductsService.create({...createTypeProductDto, image: filePath}, user);
+    const filePath = `public/type-product/image/${images?.filename}`;
+    return this.typeProductsService.create({...createTypeProductDto, images: filePath}, user);
   }
 
   @Get()
@@ -46,12 +47,12 @@ export class TypeProductsController {
   @Patch(':id')
   @Public()
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('image', {
+  @UseInterceptors(FileInterceptor('images', {
     storage: storage('type-product', true),
     ...multerOptions,
   }))
-  update(@Param('id') id: string, @Body() updateTypeProductDto: UpdateTypeProductDto, @UploadedFile() image: Express.Multer.File) {
-    return this.typeProductsService.update(+id, updateTypeProductDto, image);
+  update(@Param('id') id: string, @Body() updateTypeProductDto: UpdateTypeProductDto, @UploadedFile() images: Express.Multer.File) {
+    return this.typeProductsService.update(+id, updateTypeProductDto, images);
   }
 
   @Delete(':id')

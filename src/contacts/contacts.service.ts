@@ -15,19 +15,19 @@ export class ContactsService {
     @InjectRepository(Contact) private repo: Repository<Contact>,
     @InjectRepository(User) private userrepo: Repository<User>,
   ){}
-  async create(createContactDto: CreateContactDto, user: User): Promise<Contact> {
-    const {name, phone, address, userId, messages} = createContactDto
+  async create(createContactDto: CreateContactDto, user_cr: User) {
+    const {name, phone, address, user, messages} = createContactDto
     // console.log(messages)
     // kiem tra dia chi cua user
     const checkName = await this.repo.findOne({
       where: {name},
     })
 
-    const checkUser = await this.userrepo.findOne({where: {id: (userId)}})
+    const checkUser = await this.userrepo.findOne({where: {id: Number(user)}})
     if(!checkUser) {
-      throw new HttpException(`Không tìm thầy user với ID: ${userId}`, 409)
+      throw new HttpException(`Không tìm thầy user với ID: ${user}`, 409)
     }
-    const isUserLinked = await this.repo.findOne({ where: { user: { id: userId } } });
+    const isUserLinked = await this.repo.findOne({ where: { user: { id: Number(user) } } });
     if (isUserLinked) {
       throw new HttpException('User này đã có liên hệ (contact) rồi', 409);
     }
@@ -45,7 +45,7 @@ export class ContactsService {
       address,
       messages,
       user: {...checkUser},
-      createdBy: user?.isAdmin ? user : null, 
+      createdBy: user_cr?.isAdmin ? user_cr : null, 
     }
     // console.log(newContact)
     return await this.repo.save(newContact)

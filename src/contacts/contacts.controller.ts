@@ -38,6 +38,7 @@ export class ContactsController {
   }
 
   @Patch(':id')
+  @Public()
   update(@Param('id') id: string, @Body() updateContactDto: UpdateContactDto, @Req() request: Request) {
     const user: User = request['user']
     return this.contactsService.update(+id, updateContactDto, user);

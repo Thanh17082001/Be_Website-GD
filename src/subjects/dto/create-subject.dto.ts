@@ -9,22 +9,17 @@ export class CreateSubjectDto extends OmitType(BaseDto, [] as const) {
     @IsNotEmpty()
     name: string;
 
-    @ApiProperty()
-    @IsNumber()
-    @IsNotEmpty()
-    gradeId: number;
-
-    // @ApiProperty({ type: [Number] })
-    // @IsArray()
-    // @ArrayNotEmpty()
-    // @IsNumber({}, { each: true })
-    // @Type(() => Number)
-    // productIds: number[];
-
-    @ApiProperty({ type: [Number] })
+    @ApiProperty({ type: [String] }) 
     @IsArray()
     @ArrayNotEmpty()
-    @IsNumber({}, { each: true })
-    @Type(() => Number)
-    classes: number[];
+    @IsString({ each: true }) 
+    @Type(() => String)
+    grades: string[];
+
+    @ApiProperty({ type: [String] }) 
+    @IsArray()
+    @ArrayNotEmpty()
+    @IsString({ each: true }) 
+    @Type(() => String)
+    classes: string[]; 
 }

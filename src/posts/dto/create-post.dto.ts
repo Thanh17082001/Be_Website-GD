@@ -18,7 +18,7 @@ export class CreatePostDto extends OmitType(BaseDto,['isPublic'] as const){
 
     @ApiProperty({ type: 'string', format: 'binary' })
     // @IsString()
-    image: any
+    images: any
 
     @ApiProperty()
     @IsString()

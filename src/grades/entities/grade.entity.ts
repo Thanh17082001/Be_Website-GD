@@ -1,7 +1,7 @@
 import { Category } from "src/categories/entities/category.entity";
-import { Class } from "src/class/entities/class.entity";
+import { Class } from "src/classes/entities/class.entity";
 import { BaseWithCreatedBy } from "src/common/entities/base-user-createdBy";
-import { Product } from "src/product/entities/product.entity";
+import { Product } from "src/products/entities/product.entity";
 import { Subject } from "src/subjects/entities/subject.entity";
 import { TypeProduct } from "src/type-products/entities/type-product.entity";
 import { Column, Entity, JoinTable, ManyToMany, OneToMany } from "typeorm";
@@ -11,11 +11,11 @@ export class Grade extends BaseWithCreatedBy{
     @Column()
     name: string
 
-    @OneToMany(() => Product, product => product.grade)
+    @ManyToMany(() => Product, (product) => product.grades)
+    @JoinTable()
     products: Product[];
 
-    // Một cấp có nhiều môn học
-    @OneToMany(() => Subject, (subject) => subject.grade)
+    @ManyToMany(() => Subject, (subject) => subject.grades)
     subjects: Subject[];
 
     @OneToMany(() => Class, (cls) => cls.grade)

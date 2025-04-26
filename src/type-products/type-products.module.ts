@@ -3,7 +3,7 @@ import { TypeProductsService } from './type-products.service';
 import { TypeProductsController } from './type-products.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TypeProduct } from './entities/type-product.entity';
-import { Grade } from 'src/grade/entities/grade.entity';
+import { Grade } from 'src/grades/entities/grade.entity';
 
 @Module({
   imports:[

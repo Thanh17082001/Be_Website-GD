@@ -10,7 +10,7 @@ import { PageOptionsDto } from 'src/common/pagination/page-option-dto';
 import { Grade } from './entities/grade.entity';
 import { User } from 'src/users/entities/user.entity';
 
-@Controller('grade')
+@Controller('grades')
 @UseGuards(RoleGuard)
 export class GradeController {
   constructor(private readonly gradeService: GradeService) { }
@@ -18,17 +18,17 @@ export class GradeController {
   @Post()
   // @Roles(Role.ADMIN)
   @Public()
-  async create( @Req() request: Request) {
-    let createGradeDto: CreateGradeDto = new CreateGradeDto();
+  async create(@Body() createGradeDto: CreateGradeDto, @Req() request: Request) {
+    // let createGradeDto: CreateGradeDto = new CreateGradeDto();
     const user: User = request['user'] ?? null;
-    let result = []
-    // Danh sách các tên cấp học
-    const names: string[] = ['Mầm non', 'Tiểu học', 'THCS', 'THPT'];
-    for (let i = 0; i < names.length; i++) {
-      createGradeDto.name = names[i];
-      result.push(await this.gradeService.create(createGradeDto, user));
-    }
-    return result
+    // let result = []
+    // // Danh sách các tên cấp học
+    // const names: string[] = ['Mầm non', 'Tiểu học', 'THCS', 'THPT'];
+    // for (let i = 0; i < names.length; i++) {
+    //   createGradeDto.name = names[i];
+    //   result.push(await this.gradeService.create(createGradeDto, user));
+    // }
+    return this.gradeService.create(createGradeDto, user)
   }
 
   @Get()

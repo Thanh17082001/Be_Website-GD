@@ -1,7 +1,7 @@
 
 import { BaseWithCreatedBy } from "src/common/entities/base-user-createdBy";
-import { Grade } from "src/grade/entities/grade.entity";
-import { Product } from "src/product/entities/product.entity";
+import { Grade } from "src/grades/entities/grade.entity";
+import { Product } from "src/products/entities/product.entity";
 import { Subject } from "src/subjects/entities/subject.entity";
 import { Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany } from "typeorm";
 

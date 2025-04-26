@@ -14,7 +14,7 @@ export class Post extends BaseWithCreatedBy{
   content: string;
 
   @Column()
-  image: string;
+  images: string;
 
   @Column()
   description: string;

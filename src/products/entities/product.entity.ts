@@ -1,7 +1,7 @@
 import { Category } from "src/categories/entities/category.entity";
-import { Class } from "src/class/entities/class.entity";
+import { Class } from "src/classes/entities/class.entity";
 import { BaseWithCreatedBy } from "src/common/entities/base-user-createdBy";
-import { Grade } from "src/grade/entities/grade.entity";
+import { Grade } from "src/grades/entities/grade.entity";
 import { Subject } from "src/subjects/entities/subject.entity";
 import { TypeProduct } from "src/type-products/entities/type-product.entity";
 import { Column, Entity, JoinTable, ManyToMany, ManyToOne } from "typeorm";
@@ -32,10 +32,11 @@ export class Product extends BaseWithCreatedBy {
     @Column('text', { array: true })
     images: string[];
 
-    @ManyToOne(() => Grade, grade => grade.products, { nullable: true, onDelete: 'SET NULL' })
-    grade: Grade;
+    @ManyToMany(() => Grade, (grade) => grade.products)
+    grades: Grade[];
 
     @ManyToMany(() => Class, classEntity => classEntity.products)
+    @JoinTable()
     classes: Class[];
 
     @ManyToMany(() => Subject, subject => subject.products)

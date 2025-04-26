@@ -16,12 +16,12 @@ export class PostService {
   ){}
   async create(createPostDto: CreatePostDto, user: User): Promise<Post> {
     // console.log(createPostDto)
-    const { name, title, content, image, description} = createPostDto
+    const { name, title, content, images, description} = createPostDto
     const post = await this.repo.save({
       name: name,
       title: title,
       content: content,
-      image: image,
+      images: images,
       description: description,
       createdBy: user.isAdmin ? user : null
     })
@@ -59,8 +59,8 @@ export class PostService {
       
       // 💡 Map lại image path thành full URL
       const mappedEntities = entities.map((post) => {
-        if (post.image && !post.image.startsWith('http')) {
-          post.image = `${process.env.HOST_API_URL || 'http://localhost:3087/api'}/${post.image}`;
+        if (post.images && !post.images.startsWith('http')) {
+          post.images = `${process.env.HOST_API_URL || 'http://192.168.1.45:3087/api'}/${post.images}`;
         }
         return post;
       });
@@ -77,9 +77,9 @@ export class PostService {
         throw new NotFoundException(`Không tìm thấy bài viết với ID: ${id}`);
       }
     
-      if (post.image) {
-        const hostUrl = 'http://localhost:3087/api'; // Có thể dùng biến ENV nếu cần
-        post.image = `${hostUrl}/api/${post.image}`;
+      if (post.images) {
+        const hostUrl = 'http://192.168.1.45:3087'; // Có thể dùng biến ENV nếu cần
+        post.images = `${hostUrl}/api/${post.images}`;
       }
     
       return post;

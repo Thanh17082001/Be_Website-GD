@@ -1,6 +1,6 @@
 import { BaseWithCreatedBy } from "src/common/entities/base-user-createdBy";
-import { Grade } from "src/grade/entities/grade.entity";
-import { Product } from "src/product/entities/product.entity";
+import { Grade } from "src/grades/entities/grade.entity";
+import { Product } from "src/products/entities/product.entity";
 import { Column, Entity, JoinTable, ManyToMany } from "typeorm";
 
 @Entity()

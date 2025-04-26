@@ -11,7 +11,7 @@ export class UsersController {
   constructor(private readonly userService: UsersService) {}
 
   @Post('admin')
-  async createAdmin(@Body() createUserDto: CreateUserDto) {
+  async createAdmin() {
     const userDto: CreateUserDto = {
         fullName: `Quản Trị Viên `,
         username: 'admin',

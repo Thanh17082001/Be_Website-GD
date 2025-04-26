@@ -8,6 +8,6 @@ export class CreateClassDto extends OmitType(BaseDto, [] as const){
     name: string
 
     @ApiProperty()
-    @IsNumber()
-    grade: number
+    @IsString()
+    gradeId: string
 } 

@@ -1,4 +1,4 @@
-import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateTypeProductDto } from './dto/create-type-product.dto';
 import { UpdateTypeProductDto } from './dto/update-type-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -8,7 +8,7 @@ import { PageOptionsDto } from 'src/common/pagination/page-option-dto';
 import { ItemDto, PageDto } from 'src/common/pagination/page.dto';
 import { PageMetaDto } from 'src/common/pagination/page.metadata.dto';
 import { User } from 'src/users/entities/user.entity';
-import { Grade } from 'src/grade/entities/grade.entity';
+import { Grade } from 'src/grades/entities/grade.entity';
 
 @Injectable()
 export class TypeProductsService {
@@ -16,29 +16,47 @@ export class TypeProductsService {
     @InjectRepository(TypeProduct) private repo: Repository<TypeProduct>,
     @InjectRepository(Grade) private gradeRepo: Repository<Grade>
   ) { }
-  async create(createTypeProductDto: CreateTypeProductDto, user: User): Promise<TypeProduct> {
-    const { name, image, grades } = createTypeProductDto
-    // console.log(name, grades)
-    const isTypeProduct = await this.repo.findOne({ where: { name } })
-    if (isTypeProduct) {
-      throw new HttpException('Tên đã tồn tại', 409)
+  async create(createTypeProductDto: CreateTypeProductDto, user: User) {
+    const { name, images } = createTypeProductDto;
+    let { grades } = createTypeProductDto;
+
+    // Parse grades nếu là string
+    if (typeof grades === 'string') {
+      try {
+        grades = JSON.parse(grades); // '[2]' -> [2]
+      } catch (e) {
+        throw new HttpException('Định dạng grades không hợp lệ', 400);
+      }
     }
 
-    const newGrades = await this.gradeRepo.find({
-      where: { id: In(grades) }
-    })
-    if (newGrades.length !== grades.length) {
-      throw new HttpException('Một hoặc nhiều cấp học không tồn tại', 409)
+    // Kiểm tra trùng tên
+    const isTypeProduct = await this.repo.findOne({ where: { name } });
+    if (isTypeProduct) {
+      throw new HttpException('Tên đã tồn tại', 409);
+    }
+
+    // Xử lý grades
+    let gradeIds: number[] = [];
+    let newGrades: Grade[] = [];
+    if (Array.isArray(grades) && grades.length > 0) {
+      gradeIds = grades.map(id => parseInt(id, 10));
+      newGrades = await this.gradeRepo.find({ where: { id: In(gradeIds) } });
+
+      if (newGrades.length !== gradeIds.length) {
+        throw new HttpException('Một hoặc nhiều cấp học không tồn tại', 409);
+      }
     }
 
     const newTypeProduct = this.repo.create({
       name,
-      image,
+      images,
       grades: newGrades,
       createdBy: user.isAdmin ? user : null,
     });
-    return await this.repo.save(newTypeProduct)
+    // console.log(newTypeProduct)
+    return await this.repo.save(newTypeProduct);
   }
+
 
   async findAll(
     pageOptions: PageOptionsDto,
@@ -46,13 +64,15 @@ export class TypeProductsService {
   ): Promise<PageDto<TypeProduct>> {
     const queryBuilder = this.repo.createQueryBuilder('typeproduct')
       .leftJoinAndSelect('typeproduct.createdBy', 'createdBy')
-      .leftJoinAndSelect('typeproduct.grades', 'grades')
+      .leftJoinAndSelect('typeproduct.products', 'products')
+    // .leftJoin('typeproduct.grades', 'grades'); // Dùng leftJoin để lấy grades
+
     const { page, limit, skip, order, search } = pageOptions;
 
     const paginationKeys = ['page', 'limit', 'skip', 'order', 'search'];
 
-    // Filter các điều kiện query
-    if (!!query && Object.keys(query).length > 0) {
+    // Lọc các điều kiện query
+    if (query && Object.keys(query).length > 0) {
       const arrayQuery = Object.keys(query);
       arrayQuery.forEach((key) => {
         if (key && !paginationKeys.includes(key)) {
@@ -74,23 +94,37 @@ export class TypeProductsService {
     queryBuilder
       .orderBy(`typeproduct.createdAt`, order)
       .skip(skip)
-      .limit(limit);
+      .take(limit); // Dùng .take thay vì .limit (same effect, nhưng chuẩn TypeORM hơn)
 
+    // Tính số lượng item
     const itemCount = await queryBuilder.getCount();
     const pageMetaDto = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
-    const { entities } = await queryBuilder.getRawAndEntities();
+
+    // Lấy các entities
+    const entities = await queryBuilder.getMany();
 
     // 🛠️ Map đường dẫn đầy đủ cho image
-    const host = process.env.HOST_API_URL || 'http://localhost:3087/api';
+    const host = process.env.HOST_API_URL || 'http://192.168.1.45:3087/api';
     const mappedEntities = entities.map((typeproduct) => {
-      if (typeproduct.image && !typeproduct.image.startsWith('http')) {
-        typeproduct.image = `${host}/${typeproduct.image}`;
+      if (typeproduct.images && !typeproduct.images.startsWith('http')) {
+        typeproduct.images = `${host}/${typeproduct.images}`;
       }
       return typeproduct;
     });
 
-    return new PageDto(entities, pageMetaDto);
+    // Dùng vòng lặp for để gán grades cho từng typeproduct
+    for (const typeproduct of mappedEntities) {
+      const typeProductWithGrades = await this.repo.findOne({
+        where: { id: typeproduct.id },
+        relations: ['grades'],
+      });
+
+      typeproduct.grades = typeProductWithGrades?.grades ?? [];
+    }
+
+    return new PageDto(mappedEntities, pageMetaDto);
   }
+
 
   async findOne(id: number): Promise<TypeProduct> {
     const typeProduct = await this.repo.findOne({
@@ -103,52 +137,74 @@ export class TypeProductsService {
     }
 
     // Gắn đường dẫn đầy đủ cho ảnh nếu tồn tại
-    if (typeProduct.image && !typeProduct.image.startsWith('http')) {
-      const host = process.env.HOST_API_URL || 'http://localhost:3087/api';
-      typeProduct.image = `${host}/${typeProduct.image}`;
+    if (typeProduct.images && !typeProduct.images.startsWith('http')) {
+      const host = process.env.HOST_API_URL || 'http://192.168.1.45:3087/api';
+      typeProduct.images = `${host}/${typeProduct.images}`;
     }
 
     return typeProduct;
   }
 
 
-  async update(id: number, updateTypeProductDto: UpdateTypeProductDto, image?: Express.Multer.File) {
-    // console.log(id,updateTypeProductDto, image)
-    const { name, grades } = updateTypeProductDto
-    const isID: TypeProduct = await this.repo.findOne({ where: { id } , relations: ['createdBy', 'grades'],})
-    if (!isID) {
-      throw new NotFoundException(`Không tìm thấy loại sản phẩm với ID: ${id}`)
+  async update(
+    id: number,
+    updateTypeProductDto: UpdateTypeProductDto,
+    images?: Express.Multer.File
+  ) {
+    const { name, grades } = updateTypeProductDto;
+  
+    const typeProduct = await this.repo.findOne({
+      where: { id },
+      relations: ['createdBy', 'grades'],
+    });
+  
+    if (!typeProduct) {
+      throw new NotFoundException(`Không tìm thấy loại sản phẩm với ID: ${id}`);
     }
-    const isName: TypeProduct = await this.repo.findOne({ where: { name, id: Not(id) } })
-
-    if (isName) {
-      throw new HttpException('Tên đã tồn tại', 409)
+  
+    const existingByName = await this.repo.findOne({
+      where: { name, id: Not(id) },
+    });
+  
+    if (existingByName) {
+      throw new HttpException('Tên đã tồn tại', 409);
     }
-
-    if (image) {
-      const imageUrl = await this.uploadImage(image); // Gọi hàm upload để xử lý file image
-      updateTypeProductDto.image = imageUrl; // Lưu URL của ảnh vào DTO
+  
+    // Handle image upload
+    if (images) {
+      const imageUrl = await this.uploadImage(images);
+      updateTypeProductDto.images = imageUrl;
     } else {
-      // Nếu không có file mới, giữ nguyên ảnh cũ
-      updateTypeProductDto.image = isID.image;
+      updateTypeProductDto.images = typeProduct.images;
     }
-    // Cập nhật danh sách grades nếu có
-    let newGrades : Grade[] = []
-    if (grades && Array.isArray(grades)) {
-      newGrades = await this.gradeRepo.find({where: {id: In(grades)}})
-
-      if (newGrades.length !== grades.length) {
+  
+    // Handle grades parsing
+    if (grades !== undefined) {
+      const gradeIds = this.parseGradeIds(grades);
+  
+      if (gradeIds.length === 0) {
+        throw new BadRequestException('Danh sách grade không hợp lệ');
+      }
+  
+      const gradeEntities = await this.gradeRepo.find({ where: { id: In(gradeIds) } });
+  
+      if (gradeEntities.length !== gradeIds.length) {
         throw new NotFoundException('Một hoặc nhiều grade không tồn tại');
       }
-
-      isID.grades = newGrades;
+  
+      typeProduct.grades = gradeEntities;
     }
-    // console.log(updateTypeProductDto)
+  
+    // Merge DTO fields except grades
     const { grades: _, ...restDto } = updateTypeProductDto;
-    const merged = this.repo.merge(isID, restDto);
-    return await this.repo.save(merged);
-
+    const merged = this.repo.merge(typeProduct, restDto);
+    // console.log(merged)
+    return this.repo.save(merged);
   }
+  
+  
+
+
   async uploadImage(image: Express.Multer.File): Promise<string> {
     const filePath = `public/type-product/image/${image.filename}`; // Định dạng đường dẫn lưu ảnh
     // Giả sử bạn lưu ảnh vào thư mục public hoặc thư mục nào đó trên server
@@ -163,4 +219,30 @@ export class TypeProductsService {
     await this.repo.delete(id)
     return new ItemDto(await this.repo.delete(id))
   }
+  private parseGradeIds(grades: string[] | string): number[] {
+    let gradeIds: number[] = [];
+  
+    try {
+      if (Array.isArray(grades)) {
+        gradeIds = grades.map((g) => parseInt(g, 10)).filter((id) => !isNaN(id));
+      } else if (typeof grades === 'string') {
+        // Xử lý nếu là dạng JSON string như '[2,3]'
+        if (grades.trim().startsWith('[')) {
+          const parsed = JSON.parse(grades);
+          if (Array.isArray(parsed)) {
+            gradeIds = parsed.map((g) => parseInt(g, 10)).filter((id) => !isNaN(id));
+          }
+        } else {
+          // Dạng "2,3"
+          gradeIds = grades.split(',').map((g) => parseInt(g.trim(), 10)).filter((id) => !isNaN(id));
+        }
+      }
+    } catch (err) {
+      console.error('Error parsing grades:', err);
+      gradeIds = [];
+    }
+  
+    return gradeIds;
+  }
+  
 }

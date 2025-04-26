@@ -31,11 +31,11 @@ export class GradeService {
       .leftJoinAndSelect('grade.typeProducts', 'typeProducts')
       .leftJoinAndSelect('grade.subjects', 'subjects')
       .leftJoinAndSelect('grade.classes', 'classes')
-      .leftJoinAndSelect('grade.products', 'products')
-      .innerJoinAndSelect('grade.categories', 'categories');
+      .leftJoinAndSelect('grade.categories', 'categories');
+  
     const { page, limit, skip, order, search } = pageOptions;
-    const pagination: string[] = ['page', 'limit', 'skip', 'order', 'search']
-
+    const pagination: string[] = ['page', 'limit', 'skip', 'order', 'search'];
+  
     if (!!query && Object.keys(query).length > 0) {
       const arrayQuery: string[] = Object.keys(query);
       arrayQuery.forEach((key) => {
@@ -44,32 +44,91 @@ export class GradeService {
         }
       });
     }
-
-    //search document
+  
     if (search) {
       queryBuilder.andWhere(`LOWER(unaccent(grade.name)) ILIKE LOWER(unaccent(:search))`, {
         search: `%${search}%`,
       });
     }
-
+  
     queryBuilder.orderBy(`grade.name`, 'ASC')
       .skip(skip)
-      .limit(limit);
-
+      .take(limit);
+  
     const itemCount = await queryBuilder.getCount();
     const pageMetaDto = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
-    const { entities } = await queryBuilder.getRawAndEntities();
-
-
-    return new PageDto(entities, pageMetaDto);
+  
+    const items = await queryBuilder.getMany();
+  
+    // Load full relations giống findOne
+    const fullItems = await Promise.all(items.map(async (grade) => {
+      const fullGrade = await this.repo.findOne({
+        where: { id: grade.id },
+        relations: [
+          'typeProducts',
+          'typeProducts.createdBy',
+          'typeProducts.grades',
+          'products',
+          'products.createdBy',
+          'products.grades',
+          'products.classes',
+          'products.typeProduct',
+          'products.categories',
+          'products.subjects',
+          'subjects',
+          'subjects.createdBy',
+          'subjects.grades',
+          'subjects.products',
+          'subjects.classes',
+          'classes',
+          'classes.createdBy',
+          'classes.grade',
+          'classes.subjects',
+          'classes.products',
+          'categories',
+          'categories.createdBy',
+          'categories.products',
+          'categories.grades',
+        ],
+      });
+      return fullGrade!;
+    }));
+  
+    return new PageDto(fullItems, pageMetaDto);
   }
-
+  
+  
 
   async findOne(id: number): Promise<ItemDto<Grade>> {
 
     const example = await this.repo.findOne({
       where: { id },
-      relations: ['typeProducts', 'products', 'subjects', 'classes', 'categories'],
+      relations: [
+        'typeProducts',
+        'typeProducts.createdBy', 
+        'typeProducts.grades', 
+        'products', 
+        'products.createdBy', 
+        'products.grades', 
+        'products.classes', 
+        'products.typeProduct', 
+        'products.categories', 
+        'products.subjects', 
+        'subjects', 
+        'subjects.createdBy', 
+        'subjects.grades', 
+        'subjects.products', 
+        'subjects.classes', 
+        'classes', 
+        'classes.createdBy', 
+        'classes.grade', 
+        'classes.subjects', 
+        'classes.products', 
+        'categories',
+        'categories.createdBy',
+        'categories.products',
+        'categories.grades',
+      ],
     });
     if (!example) {
       throw new HttpException('Not found', 404);

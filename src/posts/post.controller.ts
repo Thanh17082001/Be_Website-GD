@@ -13,7 +13,7 @@ import { ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerOptions, storage } from 'src/config/multer';
 
-@Controller('post')
+@Controller('posts')
 @UseGuards(AuthGuard)
 export class PostController {
   constructor(private readonly postService: PostService) {}
@@ -21,13 +21,13 @@ export class PostController {
   @Post()
   @Roles(Role.ADMIN)
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('image', { storage: storage('post', true), ...multerOptions }))
-  create(@UploadedFile() image: Express.Multer.File,@Body() createPostDto: CreatePostDto, @Req() request: Request) {
+  @UseInterceptors(FileInterceptor('images', { storage: storage('post', true), ...multerOptions }))
+  create(@UploadedFile() images: Express.Multer.File,@Body() createPostDto: CreatePostDto, @Req() request: Request) {
     // console.log('Image:', image);
     // console.log('Body:', createPostDto);
     const user: User = request['user'] ?? null;
-    const filePath = `public/post/image/${image.filename}`;
-    return this.postService.create({...createPostDto, image: filePath}, user); 
+    const filePath = `public/post/image/${images.filename}`;
+    return this.postService.create({...createPostDto, images: filePath}, user); 
   }
 
   @Get()

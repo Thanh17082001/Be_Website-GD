@@ -1,5 +1,5 @@
 import { ApiProperty, OmitType } from "@nestjs/swagger";
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 import { IsArray, IsNumber, IsOptional, IsString } from "class-validator";
 import { BaseDto } from "src/common/dto/base.dto";
 
@@ -37,29 +37,28 @@ export class CreateProductDto extends OmitType(BaseDto,[] as const){
   // @IsArray()
   images?: string[];
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ type: [String], required: false })
   @IsOptional()
-  // @IsNumber()
-  gradeId?: string;
+  @IsString({ each: true })
+  grades?: string[];
 
-  @ApiProperty({ type: [Number], required: false })
+  @ApiProperty({ type: [String], required: false })
   @IsOptional()
-  // @IsArray()
-  @Type(() => Number)
-  subjects?: number[];
+  @IsString({ each: true })
+  subjects?: string[];
 
-  @ApiProperty({ type: [Number], required: false })
+  @ApiProperty({ type: [String], required: false })
   @IsOptional()
-  // @IsArray()
-  @Type(() => Number)
-  classes?: number[];
+  @IsString({ each: true })
+  classes?: string[];
 
   @ApiProperty({ required: false })
   @IsOptional()
-  typeProductId?: string;
+  @IsString()
+  typeProduct?: string;
 
-  @ApiProperty({ type: String, required: false })
+  @ApiProperty({ required: false })
   @IsOptional()
-  // @IsArray()
-  categoryIds?: string;
+  @IsString()
+  categories?: string;
 }

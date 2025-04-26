@@ -5,11 +5,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from './entities/category.entity';
 import { In, Not, Repository } from 'typeorm';
 import { User } from 'src/users/entities/user.entity';
-import { Product } from 'src/product/entities/product.entity';
+import { Product } from 'src/products/entities/product.entity';
 import { PageOptionsDto } from 'src/common/pagination/page-option-dto';
 import { PageDto } from 'src/common/pagination/page.dto';
 import { PageMetaDto } from 'src/common/pagination/page.metadata.dto';
-import { Grade } from 'src/grade/entities/grade.entity';
+import { Grade } from 'src/grades/entities/grade.entity';
 
 @Injectable()
 export class CategoriesService {
@@ -18,39 +18,32 @@ export class CategoriesService {
     @InjectRepository(Product) private repoProduct: Repository<Product>,
     @InjectRepository(Grade) private gradeRepo: Repository<Grade>,
   ) { }
-  async create(createCategoryDto: CreateCategoryDto, user: User): Promise<Category> {
-    const { name, products, grades } = createCategoryDto;
-
+  // : Promise<Category>
+  async create(createCategoryDto: CreateCategoryDto, user: User) {
+    const { name, grades } = createCategoryDto;
+    console.log(grades)
     const checkName = await this.repo.findOne({ where: { name } })
     if (checkName) {
       throw new HttpException('Tên danh mục đã tồn tại', 409)
     }
 
-    // Kiểm tra danh sách sản phẩm liên kết
-    let newProducts: Product[] = [];
-    if (Array.isArray(products) && products.length > 0) {
-      newProducts = await this.repoProduct.findBy({ id: In(products) });
-
-      if (newProducts.length !== products.length) {
-        throw new HttpException('Một hoặc nhiều sản phẩm không tồn tại', 404);
-      }
-    }
-    // Kiểm tra danh sách cấp học liên kết (grades)
     let newGrades: Grade[] = [];
     if (Array.isArray(grades) && grades.length > 0) {
-      newGrades = await this.gradeRepo.findBy({ id: In(grades) });
+      const gradeIds = grades.map(id => Number(id));
+      newGrades = await this.gradeRepo.findBy({ id: In(gradeIds) });
 
-      if (newGrades.length !== grades.length) {
+      if (newGrades.length !== gradeIds.length) {
         throw new HttpException('Một hoặc nhiều cấp học không tồn tại', 404);
       }
     }
     const newCategory = {
       name,
-      products: newProducts,
+      // products: newProducts,
       grades: newGrades
     }
-
+    // console.log(newCategory)
     return await this.repo.save(newCategory)
+    
   }
 
   async findAll(
@@ -107,9 +100,9 @@ export class CategoriesService {
     return category
   }
 
-  async update(id: number, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
+  async update(id: number, updateCategoryDto: UpdateCategoryDto) {
     // console.log(id)
-    const { name, products, grades } = updateCategoryDto
+    const { name, grades } = updateCategoryDto
 
     const existingCategory = await this.repo.findOne({
       where: { id },
@@ -134,30 +127,19 @@ export class CategoriesService {
       existingCategory.name = name
     }
 
-    // Nếu có productIds, cập nhật lại danh sách products
-    if (products && Array.isArray(products)) {
-      const newProducts = await this.repoProduct.find({
-        where: { id: In(products) },
-      });
-
-      if (newProducts.length !== products.length) {
-        throw new NotFoundException('Một hoặc nhiều sản phẩm không tồn tại');
-      }
-
-      existingCategory.products = newProducts;
-    }
     if (grades && Array.isArray(grades)) {
+      const gradeIds = grades.map(id => Number(id));
       const newGrades = await this.gradeRepo.find({
-        where: { id: In(grades) },
+        where: { id: In(gradeIds) },
       });
 
-      if (newGrades.length !== grades.length) {
+      if (newGrades.length !== gradeIds.length) {
         throw new NotFoundException('Một hoặc nhiều cấp học không tồn tại');
       }
 
       existingCategory.grades = newGrades;
     }
-
+    // console.log(existingCategory)
     return await this.repo.save(existingCategory);
 
   }

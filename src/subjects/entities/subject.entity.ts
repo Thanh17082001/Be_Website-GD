@@ -1,7 +1,7 @@
-import { Class } from "src/class/entities/class.entity";
+import { Class } from "src/classes/entities/class.entity";
 import { BaseWithCreatedBy } from "src/common/entities/base-user-createdBy";
-import { Grade } from "src/grade/entities/grade.entity";
-import { Product } from "src/product/entities/product.entity";
+import { Grade } from "src/grades/entities/grade.entity";
+import { Product } from "src/products/entities/product.entity";
 import { Column, Entity, JoinTable, ManyToMany, ManyToOne, OneToMany } from "typeorm";
 
 @Entity()
@@ -9,9 +9,9 @@ export class Subject extends BaseWithCreatedBy {
     @Column()
     name: string
 
-    // Một môn học thuộc một khối
-    @ManyToOne(() => Grade, (grade) => grade.subjects, { onDelete: 'SET NULL' })
-    grade: Grade;
+    @ManyToMany(() => Grade, (grade) => grade.subjects)
+    @JoinTable() 
+    grades: Grade[];
 
     @ManyToMany(() => Product, product => product.subjects)
     products: Product[];

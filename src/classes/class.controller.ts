@@ -10,7 +10,7 @@ import { Role } from 'src/role/role.enum';
 import { PageOptionsDto } from 'src/common/pagination/page-option-dto';
 import { Class } from './entities/class.entity';
 
-@Controller('class')
+@Controller('classes')
 @UseGuards(RoleGuard)
 export class ClassController {
   constructor(private readonly classService: ClassService) {}

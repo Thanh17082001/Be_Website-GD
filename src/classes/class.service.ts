@@ -4,7 +4,7 @@ import { UpdateClassDto } from './dto/update-class.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
 import { Class } from './entities/class.entity';
-import { Grade } from 'src/grade/entities/grade.entity';
+import { Grade } from 'src/grades/entities/grade.entity';
 import { User } from 'src/users/entities/user.entity';
 import { ItemDto, PageDto } from 'src/common/pagination/page.dto';
 import { PageOptionsDto } from 'src/common/pagination/page-option-dto';
@@ -17,11 +17,16 @@ export class ClassService {
     @InjectRepository(Grade) private repoGrade: Repository<Grade>,
   ) { }
   async create(createClassDto: CreateClassDto, user: User) {
-    const { name, grade } = createClassDto;
+    const { name, gradeId } = createClassDto;
     if (await this.repo.findOne({ where: { name } })) {
       throw new HttpException('Tên đã tồn tại', 409);
     }
-    const checkGrade: Grade = await this.repoGrade.findOne({ where: { id: grade } });
+    // Ép kiểu gradeId sang number (vì id trong DB thường là số)
+    const parsedGradeId = Number(gradeId);
+    if (isNaN(parsedGradeId)) {
+      throw new HttpException('Khối không hợp lệ', 400);
+    }
+    const checkGrade: Grade = await this.repoGrade.findOne({ where: { id: parsedGradeId } });
     if (!checkGrade) {
       throw new HttpException('Khối không tồn tại', 409);
     }
@@ -31,6 +36,7 @@ export class ClassService {
       grade: checkGrade,
       createdBy: user?.isAdmin ? user : null,
     }
+    // console.log(newClass)
     return await this.repo.save(newClass);
   }
 
@@ -89,27 +95,41 @@ export class ClassService {
   }
 
   async update(id: number, updateClassDto: UpdateClassDto) {
-    const { name, grade } = updateClassDto;
+    const { name, gradeId } = updateClassDto;
+  
+    // Kiểm tra tên đã tồn tại chưa
     const exampleExits: Class = await this.repo.findOne({ where: { name, id: Not(id) } });
     if (exampleExits) {
       throw new HttpException('Tên đã tồn tại', 409);
     }
-
-    const example: Class = await this.repo.findOne({ where: { id } });
+  
+    // Kiểm tra sự tồn tại của Class
+    const example: Class = await this.repo.findOne({ where: { id }, relations: ['grade'] });
     if (!example) {
       throw new NotFoundException(`Class with ID ${id} not found`);
     }
-    const checkGrade: Grade = await this.repoGrade.findOne({ where: { id: grade } });
-    if (!checkGrade) {
-      throw new HttpException('Lớp không tồn tại', 409);
+  
+    // Kiểm tra sự tồn tại của grade (cấp)
+    const parsedGradeId = Number(gradeId); // Ép kiểu gradeId sang number
+    if (isNaN(parsedGradeId)) {
+      throw new HttpException('Cấp không hợp lệ', 400);
     }
-
-    Object.assign(example, { name, grade })
-
-    await this.repo.update(id, example)
-
-    return new ItemDto(example);;
+  
+    const checkGrade: Grade = await this.repoGrade.findOne({ where: { id: parsedGradeId } });
+    if (!checkGrade) {
+      throw new HttpException('Cấp không tồn tại', 409);
+    }
+  
+    // Cập nhật các trường trong đối tượng Class
+    Object.assign(example, { name, grade: checkGrade }); // Thay gradeId bằng đối tượng grade
+  
+    // Cập nhật dữ liệu trong DB
+    // console.log(example)
+    await this.repo.save(example);
+  
+    return new ItemDto(example);
   }
+  
 
   async remove(id: number) {
     const example = this.repo.findOne({ where: { id } });
