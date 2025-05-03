@@ -3,11 +3,12 @@ import { Class } from "src/classes/entities/class.entity";
 import { BaseWithCreatedBy } from "src/common/entities/base-user-createdBy";
 import { Product } from "src/products/entities/product.entity";
 import { Subject } from "src/subjects/entities/subject.entity";
+import { TypeParent } from "src/type-parents/entities/type-parent.entity";
 import { TypeProduct } from "src/type-products/entities/type-product.entity";
 import { Column, Entity, JoinTable, ManyToMany, OneToMany } from "typeorm";
 
 @Entity()
-export class Grade extends BaseWithCreatedBy{
+export class Grade extends BaseWithCreatedBy {
     @Column()
     name: string
 
@@ -27,4 +28,7 @@ export class Grade extends BaseWithCreatedBy{
 
     @ManyToMany(() => Category, (category) => category.grades)
     categories: Category[];
+
+    @ManyToMany(() => TypeParent, typeParent => typeParent.grades)
+    typeParents: TypeParent[];
 }

@@ -10,11 +10,12 @@ import { GradeModule } from 'src/grades/grade.module';
 import { Subject } from 'src/subjects/entities/subject.entity';
 import { TypeProduct } from 'src/type-products/entities/type-product.entity';
 import { Category } from 'src/categories/entities/category.entity';
+import { TypeParent } from 'src/type-parents/entities/type-parent.entity';
 
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Product, Class, Grade, Subject, TypeProduct, Category]), 
+    TypeOrmModule.forFeature([Product, Class, Grade, Subject, TypeProduct, Category, TypeParent]), 
     ClassModule,  
     GradeModule,  
   ],

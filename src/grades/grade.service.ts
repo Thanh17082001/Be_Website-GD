@@ -25,17 +25,17 @@ export class GradeService {
     });
     return await this.repo.save(newUser);
   }
-
   async findAll(pageOptions: PageOptionsDto, query: Partial<Grade>): Promise<PageDto<Grade>> {
     const queryBuilder = this.repo.createQueryBuilder('grade')
       .leftJoinAndSelect('grade.typeProducts', 'typeProducts')
       .leftJoinAndSelect('grade.subjects', 'subjects')
       .leftJoinAndSelect('grade.classes', 'classes')
-      .leftJoinAndSelect('grade.categories', 'categories');
-  
+      .leftJoinAndSelect('grade.categories', 'categories')
+      .leftJoinAndSelect('grade.typeParents', 'typeParents');
+
     const { page, limit, skip, order, search } = pageOptions;
     const pagination: string[] = ['page', 'limit', 'skip', 'order', 'search'];
-  
+
     if (!!query && Object.keys(query).length > 0) {
       const arrayQuery: string[] = Object.keys(query);
       arrayQuery.forEach((key) => {
@@ -44,37 +44,38 @@ export class GradeService {
         }
       });
     }
-  
+
     if (search) {
       queryBuilder.andWhere(`LOWER(unaccent(grade.name)) ILIKE LOWER(unaccent(:search))`, {
         search: `%${search}%`,
       });
     }
-  
+
     queryBuilder.orderBy(`grade.name`, 'ASC')
       .skip(skip)
       .take(limit);
-  
+
     const itemCount = await queryBuilder.getCount();
     const pageMetaDto = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
-  
+
     const items = await queryBuilder.getMany();
-  
+
     // Load full relations giống findOne
     const fullItems = await Promise.all(items.map(async (grade) => {
       const fullGrade = await this.repo.findOne({
         where: { id: grade.id },
         relations: [
+          'typeParents',
           'typeProducts',
           'typeProducts.createdBy',
           'typeProducts.grades',
           'products',
           'products.createdBy',
-          'products.grades',
-          'products.classes',
-          'products.typeProduct',
-          'products.categories',
-          'products.subjects',
+          // 'products.grades',
+          // 'products.classes',
+          // 'products.typeProduct',
+          // 'products.categories',
+          // 'products.subjects',
           'subjects',
           'subjects.createdBy',
           'subjects.grades',
@@ -93,37 +94,35 @@ export class GradeService {
       });
       return fullGrade!;
     }));
-  
+
     return new PageDto(fullItems, pageMetaDto);
   }
-  
-  
-
   async findOne(id: number): Promise<ItemDto<Grade>> {
 
     const example = await this.repo.findOne({
       where: { id },
       relations: [
+        'typeParents',
         'typeProducts',
-        'typeProducts.createdBy', 
-        'typeProducts.grades', 
-        'products', 
-        'products.createdBy', 
-        'products.grades', 
-        'products.classes', 
-        'products.typeProduct', 
-        'products.categories', 
-        'products.subjects', 
-        'subjects', 
-        'subjects.createdBy', 
-        'subjects.grades', 
-        'subjects.products', 
-        'subjects.classes', 
-        'classes', 
-        'classes.createdBy', 
-        'classes.grade', 
-        'classes.subjects', 
-        'classes.products', 
+        'typeProducts.createdBy',
+        'typeProducts.grades',
+        'products',
+        'products.createdBy',
+        'products.grades',
+        'products.classes',
+        'products.typeProduct',
+        'products.categories',
+        'products.subjects',
+        'subjects',
+        'subjects.createdBy',
+        'subjects.grades',
+        'subjects.products',
+        'subjects.classes',
+        'classes',
+        'classes.createdBy',
+        'classes.grade',
+        'classes.subjects',
+        'classes.products',
         'categories',
         'categories.createdBy',
         'categories.products',
@@ -162,6 +161,76 @@ export class GradeService {
 
     return new ItemDto(example);;
   }
+  async filterByTypeParentAndGrade(
+    pageOptions: PageOptionsDto,
+    typeParentId: number,
+    gradeId: number,
+  ): Promise<PageDto<Grade>> {
+    const queryBuilder = this.repo.createQueryBuilder('grade')
+      .leftJoinAndSelect('grade.typeProducts', 'typeProducts')
+      .leftJoinAndSelect('grade.subjects', 'subjects')
+      .leftJoinAndSelect('grade.classes', 'classes')
+      .leftJoinAndSelect('grade.categories', 'categories')
+      .leftJoinAndSelect('grade.typeParents', 'typeParents');
+
+    const { skip, limit, order, search } = pageOptions;
+
+    // Lọc theo typeParentId và gradeId
+    queryBuilder.where('grade.id = :gradeId', { gradeId });
+    queryBuilder.andWhere('typeParents.id = :typeParentId', { typeParentId }); 
+
+    // Search nếu có
+    if (search) {
+      queryBuilder.andWhere(`LOWER(unaccent(grade.name)) ILIKE LOWER(unaccent(:search))`, {
+        search: `%${search}%`,
+      });
+    }
+
+    queryBuilder.orderBy('grade.name', order).skip(skip).take(limit);
+
+    const itemCount = await queryBuilder.getCount();
+    const pageMetaDto = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
+    const items = await queryBuilder.getMany();
+
+    // Load full relations
+    const fullItems = await Promise.all(items.map(async (grade) => {
+      const fullGrade = await this.repo.findOne({
+        where: { id: grade.id },
+        relations: [
+          'typeProducts',
+          'typeParents',
+          // 'typeProducts',
+          // 'typeProducts.createdBy',
+          // 'typeProducts.grades',
+          'products',
+          // 'products.createdBy',
+          // // 'products.grades',
+          // // 'products.classes',
+          // // 'products.typeProduct',
+          // // 'products.categories',
+          // // 'products.subjects',
+          'subjects',
+          // 'subjects.createdBy',
+          // 'subjects.grades',
+          // 'subjects.products',
+          // 'subjects.classes',
+          'classes',
+          // 'classes.createdBy',
+          // 'classes.grade',
+          // 'classes.subjects',
+          // 'classes.products',
+          'categories',
+          // 'categories.createdBy',
+          // 'categories.products',
+          // 'categories.grades',
+        ],
+      });
+      return fullGrade!;
+    }));
+
+    return new PageDto(fullItems, pageMetaDto);
+  }
+
 
 
 }

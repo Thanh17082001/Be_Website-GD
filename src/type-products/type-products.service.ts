@@ -9,17 +9,19 @@ import { ItemDto, PageDto } from 'src/common/pagination/page.dto';
 import { PageMetaDto } from 'src/common/pagination/page.metadata.dto';
 import { User } from 'src/users/entities/user.entity';
 import { Grade } from 'src/grades/entities/grade.entity';
+import { TypeParent } from 'src/type-parents/entities/type-parent.entity';
 
 @Injectable()
 export class TypeProductsService {
   constructor(
     @InjectRepository(TypeProduct) private repo: Repository<TypeProduct>,
-    @InjectRepository(Grade) private gradeRepo: Repository<Grade>
+    @InjectRepository(Grade) private gradeRepo: Repository<Grade>,
+    @InjectRepository(TypeParent) private typeParentrepo: Repository<TypeParent>,
   ) { }
-  async create(createTypeProductDto: CreateTypeProductDto, user: User) {
-    const { name, images } = createTypeProductDto;
+  async create(createTypeProductDto: CreateTypeProductDto, user: User): Promise<TypeProduct> {
+    const { name, images, typeParent } = createTypeProductDto;
     let { grades } = createTypeProductDto;
-
+  
     // Parse grades nếu là string
     if (typeof grades === 'string') {
       try {
@@ -28,36 +30,54 @@ export class TypeProductsService {
         throw new HttpException('Định dạng grades không hợp lệ', 400);
       }
     }
-
-    // Kiểm tra trùng tên
-    const isTypeProduct = await this.repo.findOne({ where: { name } });
+  
+    // Xử lý TypeParent nếu có
+    let typeParentEntity: TypeParent = null;
+    if (typeParent) {
+      const typeParentId = typeof typeParent === 'string' ? parseInt(typeParent, 10) : typeParent;
+  
+      typeParentEntity = await this.typeParentrepo.findOne({ where: { id: typeParentId } });
+      if (!typeParentEntity) {
+        throw new HttpException('TypeParent không tồn tại', 404);
+      }
+    }
+  
+    // Kiểm tra trùng tên theo name + typeParent
+    const isTypeProduct = await this.repo.findOne({
+      where: {
+        name,
+        typeParent: typeParentEntity ? { id: typeParentEntity.id } : null,
+      },
+      relations: ['typeParent'],
+    });
+  
     if (isTypeProduct) {
       throw new HttpException('Tên đã tồn tại', 409);
     }
-
+  
     // Xử lý grades
     let gradeIds: number[] = [];
     let newGrades: Grade[] = [];
     if (Array.isArray(grades) && grades.length > 0) {
       gradeIds = grades.map(id => parseInt(id, 10));
       newGrades = await this.gradeRepo.find({ where: { id: In(gradeIds) } });
-
+  
       if (newGrades.length !== gradeIds.length) {
         throw new HttpException('Một hoặc nhiều cấp học không tồn tại', 409);
       }
     }
-
+  
     const newTypeProduct = this.repo.create({
       name,
       images,
       grades: newGrades,
+      typeParent: typeParentEntity,
       createdBy: user.isAdmin ? user : null,
     });
-    // console.log(newTypeProduct)
+  
     return await this.repo.save(newTypeProduct);
   }
-
-
+  
   async findAll(
     pageOptions: PageOptionsDto,
     query: Partial<TypeProduct>,
@@ -65,6 +85,7 @@ export class TypeProductsService {
     const queryBuilder = this.repo.createQueryBuilder('typeproduct')
       .leftJoinAndSelect('typeproduct.createdBy', 'createdBy')
       .leftJoinAndSelect('typeproduct.products', 'products')
+      .innerJoinAndSelect('typeproduct.typeParent', 'typeParent');
     // .leftJoin('typeproduct.grades', 'grades'); // Dùng leftJoin để lấy grades
 
     const { page, limit, skip, order, search } = pageOptions;
@@ -124,12 +145,10 @@ export class TypeProductsService {
 
     return new PageDto(mappedEntities, pageMetaDto);
   }
-
-
   async findOne(id: number): Promise<TypeProduct> {
     const typeProduct = await this.repo.findOne({
       where: { id },
-      relations: ['createdBy', 'grades'],
+      relations: ['createdBy', 'grades', 'typeParent'],
     });
 
     if (!typeProduct) {
@@ -144,33 +163,52 @@ export class TypeProductsService {
 
     return typeProduct;
   }
-
-
   async update(
     id: number,
     updateTypeProductDto: UpdateTypeProductDto,
     images?: Express.Multer.File
   ) {
-    const { name, grades } = updateTypeProductDto;
+    const { name, grades, typeParent } = updateTypeProductDto;
   
     const typeProduct = await this.repo.findOne({
       where: { id },
-      relations: ['createdBy', 'grades'],
+      relations: ['createdBy', 'grades', 'typeParent'],
     });
   
     if (!typeProduct) {
       throw new NotFoundException(`Không tìm thấy loại sản phẩm với ID: ${id}`);
     }
   
+    // Xử lý typeParent nếu có truyền vào (dùng để kiểm tra trùng tên)
+    let newTypeParent = typeProduct.typeParent;
+    if (typeParent !== undefined) {
+      const typeParentId = parseInt(typeParent as string, 10);
+      newTypeParent = await this.typeParentrepo.findOne({
+        where: { id: typeParentId },
+      });
+  
+      if (!newTypeParent) {
+        throw new NotFoundException('TypeParent không tồn tại');
+      }
+  
+      typeProduct.typeParent = newTypeParent;
+    }
+  
+    // Kiểm tra name trùng trong cùng typeParent
     const existingByName = await this.repo.findOne({
-      where: { name, id: Not(id) },
+      where: {
+        name,
+        typeParent: { id: newTypeParent?.id },
+        id: Not(id),
+      },
+      relations: ['typeParent'],
     });
   
     if (existingByName) {
       throw new HttpException('Tên đã tồn tại', 409);
     }
   
-    // Handle image upload
+    // Xử lý hình ảnh
     if (images) {
       const imageUrl = await this.uploadImage(images);
       updateTypeProductDto.images = imageUrl;
@@ -178,7 +216,7 @@ export class TypeProductsService {
       updateTypeProductDto.images = typeProduct.images;
     }
   
-    // Handle grades parsing
+    // Xử lý grades nếu có
     if (grades !== undefined) {
       const gradeIds = this.parseGradeIds(grades);
   
@@ -195,16 +233,12 @@ export class TypeProductsService {
       typeProduct.grades = gradeEntities;
     }
   
-    // Merge DTO fields except grades
-    const { grades: _, ...restDto } = updateTypeProductDto;
+    // Gộp dữ liệu DTO trừ grades và typeParent
+    const { grades: _, typeParent: __, ...restDto } = updateTypeProductDto;
     const merged = this.repo.merge(typeProduct, restDto);
-    // console.log(merged)
+  
     return this.repo.save(merged);
-  }
-  
-  
-
-
+  }  
   async uploadImage(image: Express.Multer.File): Promise<string> {
     const filePath = `public/type-product/image/${image.filename}`; // Định dạng đường dẫn lưu ảnh
     // Giả sử bạn lưu ảnh vào thư mục public hoặc thư mục nào đó trên server
@@ -221,7 +255,7 @@ export class TypeProductsService {
   }
   private parseGradeIds(grades: string[] | string): number[] {
     let gradeIds: number[] = [];
-  
+
     try {
       if (Array.isArray(grades)) {
         gradeIds = grades.map((g) => parseInt(g, 10)).filter((id) => !isNaN(id));
@@ -241,8 +275,8 @@ export class TypeProductsService {
       console.error('Error parsing grades:', err);
       gradeIds = [];
     }
-  
+
     return gradeIds;
   }
-  
+
 }

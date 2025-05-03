@@ -57,7 +57,11 @@ export class ProductController {
     const user = request['user'] ?? null; // Lấy user từ request (nếu có)
     return this.productService.findAll(pageOptionsDto, user); // Gọi service để lấy danh sách sản phẩm
   }
-
+  @Get('filterproducts')
+  @Public()
+  async filterProducts(@Query() query: any) {
+    return this.productService.filterProducts(query);
+  }
   @Get(':id')
   @Public()
   findOne(@Param('id') id: string) {
@@ -93,20 +97,20 @@ export class ProductController {
     }
     const fieldsToParse = ['subjects', 'classes', 'categories', 'grades'];
 
-  fieldsToParse.forEach(field => {
-    const value = updateProductDto[field];
-    if (value !== undefined) {
-      if (typeof value === 'string') {
-        try {
-          updateProductDto[field] = JSON.parse(value);
-        } catch {
+    fieldsToParse.forEach(field => {
+      const value = updateProductDto[field];
+      if (value !== undefined) {
+        if (typeof value === 'string') {
+          try {
+            updateProductDto[field] = JSON.parse(value);
+          } catch {
+            updateProductDto[field] = [parseInt(value)];
+          }
+        } else if (!Array.isArray(value)) {
           updateProductDto[field] = [parseInt(value)];
         }
-      } else if (!Array.isArray(value)) {
-        updateProductDto[field] = [parseInt(value)];
       }
-    }
-  });
+    });
     // Tiến hành gọi service để cập nhật sản phẩm
     return this.productService.update(+id, updateProductDto);
   }
@@ -116,4 +120,5 @@ export class ProductController {
   remove(@Param('id') id: string) {
     return this.productService.remove(+id);
   }
+
 }

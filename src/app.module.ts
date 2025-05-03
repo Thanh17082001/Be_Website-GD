@@ -19,6 +19,8 @@ import { ProductModule } from './products/product.module';
 import { TypeProductsModule } from './type-products/type-products.module';
 import { CategoriesModule } from './categories/categories.module';
 import { ContactsModule } from './contacts/contacts.module';
+import { TypeParentsModule } from './type-parents/type-parents.module';
+import { SolutionsModule } from './solutions/solutions.module';
 
 @Module({
   imports: [
@@ -58,7 +60,7 @@ import { ContactsModule } from './contacts/contacts.module';
           console.log(error);
         }
       },
-    }), ExamplesModule, UsersModule, AuthModule, RoleModule, PostModule, GradeModule, SubjectsModule, ClassModule, ProductModule, TypeProductsModule, CategoriesModule, ContactsModule
+    }), ExamplesModule, UsersModule, AuthModule, RoleModule, PostModule, GradeModule, SubjectsModule, ClassModule, ProductModule, TypeProductsModule, CategoriesModule, ContactsModule, TypeParentsModule, SolutionsModule
   ],
   controllers: [],
   providers: [

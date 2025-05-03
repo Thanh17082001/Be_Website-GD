@@ -3,6 +3,7 @@ import { Class } from "src/classes/entities/class.entity";
 import { BaseWithCreatedBy } from "src/common/entities/base-user-createdBy";
 import { Grade } from "src/grades/entities/grade.entity";
 import { Subject } from "src/subjects/entities/subject.entity";
+import { TypeParent } from "src/type-parents/entities/type-parent.entity";
 import { TypeProduct } from "src/type-products/entities/type-product.entity";
 import { Column, Entity, JoinTable, ManyToMany, ManyToOne } from "typeorm";
 
@@ -16,6 +17,9 @@ export class Product extends BaseWithCreatedBy {
 
     @Column()
     content: string
+
+    @Column({ default: '' })
+    apply: string
 
     @Column()
     origin: string
@@ -50,4 +54,7 @@ export class Product extends BaseWithCreatedBy {
     @ManyToMany(() => Category, category => category.products)
     @JoinTable()
     categories: Category[];
+
+    @ManyToOne(() => TypeParent, typeParent => typeParent.products, { nullable: true, onDelete: 'SET NULL' })
+    typeParent: TypeParent;
 }

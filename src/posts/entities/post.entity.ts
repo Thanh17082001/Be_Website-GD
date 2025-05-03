@@ -5,9 +5,6 @@ import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 export class Post extends BaseWithCreatedBy{
 
   @Column()
-  name: string;
-
-  @Column()
   title: string;
 
   @Column()

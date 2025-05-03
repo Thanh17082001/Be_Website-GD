@@ -1,5 +1,4 @@
 import { ApiProperty, OmitType } from "@nestjs/swagger";
-import { Transform, Type } from "class-transformer";
 import { IsArray, IsNumber, IsOptional, IsString } from "class-validator";
 import { BaseDto } from "src/common/dto/base.dto";
 
@@ -15,6 +14,10 @@ export class CreateProductDto extends OmitType(BaseDto,[] as const){
   @ApiProperty()
   @IsString()
   content: string;
+
+  @ApiProperty()
+  @IsString()
+  apply: string;
 
   @ApiProperty()
   @IsString()
@@ -56,6 +59,11 @@ export class CreateProductDto extends OmitType(BaseDto,[] as const){
   @IsOptional()
   @IsString()
   typeProduct?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  typeParent?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

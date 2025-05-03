@@ -16,4 +16,9 @@ export class CreateTypeProductDto extends OmitType(BaseDto, [] as const) {
   @IsOptional()
   @IsString({ each: true })
   grades: string[];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  typeParent: string;
 }

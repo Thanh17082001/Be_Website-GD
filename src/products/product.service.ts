@@ -13,6 +13,7 @@ import { PageMetaDto } from 'src/common/pagination/page.metadata.dto';
 import { Subject } from 'src/subjects/entities/subject.entity';
 import { TypeProduct } from 'src/type-products/entities/type-product.entity';
 import { Category } from 'src/categories/entities/category.entity';
+import { TypeParent } from 'src/type-parents/entities/type-parent.entity';
 
 @Injectable()
 export class ProductService {
@@ -22,13 +23,15 @@ export class ProductService {
     @InjectRepository(Class) private classRepo: Repository<Class>,
     @InjectRepository(Subject) private subjectRepo: Repository<Subject>,
     @InjectRepository(TypeProduct) private typeProductRepo: Repository<TypeProduct>,
-    @InjectRepository(Category) private categoryRepo: Repository<Category>
+    @InjectRepository(Category) private categoryRepo: Repository<Category>,
+    @InjectRepository(TypeParent) private typeParentRepo: Repository<TypeParent>,
   ) { }
   async create(createProductDto: CreateProductDto, user: User) {
     const {
       title,
       description,
       content,
+      apply,
       origin,
       model,
       trademark,
@@ -38,6 +41,7 @@ export class ProductService {
       subjects,
       classes,
       typeProduct,
+      typeParent,  // Thêm typeParent vào DTO
       categories,
     } = createProductDto;
 
@@ -56,80 +60,91 @@ export class ProductService {
         throw new HttpException('Dữ liệu phải là mảng hợp lệ', 400);
       }
     };
-  
+
     const subjectIds = parseToArray(subjects);
     const classIds = parseToArray(classes);
     const categoryIds = parseToArray(categories);
     const gradeIds = parseToArray(grades);
-  
+
     // === Lấy dữ liệu từ DB ===
     const newGrades = gradeIds.length
-      ? await this.gradeRepo.find({where: {id: In(gradeIds)}})
+      ? await this.gradeRepo.find({ where: { id: In(gradeIds) } })
       : [];
-    // console.log(gradeIds)
-    if(gradeIds.length !== newGrades.length) {
+
+    if (gradeIds.length !== newGrades.length) {
       throw new HttpException('Một hoặc nhiều cấp không tồn tại', 404);
     }
-
 
     const newSubjects = subjectIds.length
       ? await this.subjectRepo.find({ where: { id: In(subjectIds) } })
       : [];
-  
+
     if (subjectIds.length !== newSubjects.length) {
       throw new HttpException('Một hoặc nhiều môn học không tồn tại', 404);
     }
-  
+
     const newClasses = classIds.length
       ? await this.classRepo.find({ where: { id: In(classIds) } })
       : [];
-  
+
     if (classIds.length !== newClasses.length) {
       throw new HttpException('Một hoặc nhiều lớp không tồn tại', 404);
     }
-  
+
     const typeProductId = typeProduct ? parseInt(typeProduct) : null;
     const newTypeProduct = typeProductId
       ? await this.typeProductRepo.findOne({ where: { id: typeProductId } })
       : null;
-  
+
     if (typeProductId && !newTypeProduct) {
       throw new HttpException(`Không tìm thấy loại sản phẩm với ID ${typeProductId}`, 404);
     }
-  
+
     const newCategories = categoryIds.length
       ? await this.categoryRepo.find({ where: { id: In(categoryIds) } })
       : [];
-  
+
     if (categoryIds.length !== newCategories.length) {
       throw new HttpException('Một hoặc nhiều danh mục không tồn tại', 404);
     }
-  
+
+    // === Xử lý typeParent ===
+    const typeParentId = typeParent ? parseInt(typeParent) : null;  // Chuyển typeParent thành ID
+    const newTypeParent = typeParentId
+      ? await this.typeParentRepo.findOne({ where: { id: typeParentId } })
+      : null;
+
+    if (typeParentId && !newTypeParent) {
+      throw new HttpException(`Không tìm thấy TypeParent với ID ${typeParentId}`, 404);
+    }
+
     // === Tạo mới sản phẩm ===
     const product = this.repo.create({
       title,
       description,
       content,
+      apply,
       origin,
       model,
       trademark,
       code,
-      images,  // Đây là mảng hình ảnh được lấy từ files đã upload
+      images,  // Mảng hình ảnh
       grades: newGrades,  // Lưu grades
       classes: newClasses,
       subjects: newSubjects,
       typeProduct: newTypeProduct,
+      typeParent: newTypeParent,  // Lưu typeParent vào sản phẩm
       categories: newCategories,
       createdBy: user.isAdmin ? user : null,
     });
-    // console.log(product)
-    return await this.repo.save(product);
-  } 
 
+    return await this.repo.save(product);
+  }
   async findAll(pageOptions: PageOptionsDto, query: Partial<Product>): Promise<PageDto<Product>> {
     const queryBuilder = this.repo.createQueryBuilder('product')
       .leftJoinAndSelect('product.createdBy', 'createdBy')
-      .leftJoinAndSelect('product.grades', 'grades'); // Load các quan hệ cần thiết cơ bản
+      .leftJoinAndSelect('product.grades', 'grades')
+      .leftJoinAndSelect('product.typeParent', 'typeParent');
 
     const { page, limit, skip, order, search } = pageOptions;
     const pagination: string[] = ['page', 'limit', 'skip', 'order', 'search'];
@@ -166,7 +181,7 @@ export class ProductService {
     for (const product of items) {
       const fullProduct = await this.repo.findOne({
         where: { id: product.id },
-        relations: ['classes', 'subjects', 'typeProduct', 'categories'],
+        relations: ['classes', 'subjects', 'typeProduct', 'categories', 'typeParent'],
       });
 
       product.classes = fullProduct?.classes ?? [];
@@ -186,12 +201,10 @@ export class ProductService {
 
     return new PageDto(mappedEntities, pageMetaDto);
   }
-
-
   async findOne(id: number): Promise<Product> {
     const product = await this.repo.findOne({
       where: { id },
-      relations: ['createdBy', 'grades', 'classes', 'typeProduct', 'categories', 'subjects'], // Join quan hệ cần thiết
+      relations: ['createdBy', 'grades', 'classes', 'typeProduct', 'categories', 'subjects', 'typeParent'], // Join quan hệ cần thiết
     });
 
     if (!product) {
@@ -206,13 +219,12 @@ export class ProductService {
 
     return product;
   }
-
-
   async update(id: number, updateProductDto: UpdateProductDto): Promise<Product> {
     const {
       title,
       description,
       content,
+      apply,
       origin,
       model,
       trademark,
@@ -222,13 +234,14 @@ export class ProductService {
       subjects,
       classes,
       typeProduct,
+      typeParent, // Thêm typeParent vào DTO
       categories,
     } = updateProductDto;
   
     // Lấy sản phẩm hiện tại từ DB
     const existingProduct = await this.repo.findOne({
       where: { id },
-      relations: ['createdBy', 'grade', 'classes', 'subjects', 'typeProduct', 'categories'],
+      relations: ['createdBy', 'grades', 'classes', 'subjects', 'typeProduct', 'typeParent', 'categories'],
     });
   
     if (!existingProduct) {
@@ -242,7 +255,7 @@ export class ProductService {
       if (newGrades.length !== gradeIds.length) {
         throw new BadRequestException('Một hoặc nhiều cấp học không tồn tại');
       }
-      existingProduct.grades = newGrades; // Cập nhật grade
+      existingProduct.grades = newGrades; // Cập nhật grades
     }
   
     // Gán lại subjects nếu có
@@ -252,7 +265,7 @@ export class ProductService {
       if (newSubjects.length !== subjectIds.length) {
         throw new BadRequestException('Một hoặc nhiều môn học không tồn tại');
       }
-      existingProduct.subjects = newSubjects;
+      existingProduct.subjects = newSubjects; // Cập nhật subjects
     }
   
     // Gán lại classes nếu có
@@ -262,7 +275,7 @@ export class ProductService {
       if (newClasses.length !== classIds.length) {
         throw new BadRequestException('Một hoặc nhiều lớp không tồn tại');
       }
-      existingProduct.classes = newClasses;
+      existingProduct.classes = newClasses; // Cập nhật classes
     }
   
     // Gán lại typeProduct nếu có
@@ -272,7 +285,17 @@ export class ProductService {
       if (!newTypeProduct) {
         throw new NotFoundException(`Không tìm thấy loại sản phẩm với ID: ${typeProduct}`);
       }
-      existingProduct.typeProduct = newTypeProduct;
+      existingProduct.typeProduct = newTypeProduct; // Cập nhật typeProduct
+    }
+  
+    // Gán lại typeParent nếu có
+    if (typeParent) {
+      const typeParentId = parseInt(typeParent);
+      const newTypeParent = await this.typeParentRepo.findOne({ where: { id: typeParentId } });
+      if (!newTypeParent) {
+        throw new NotFoundException(`Không tìm thấy typeParent với ID: ${typeParent}`);
+      }
+      existingProduct.typeParent = newTypeParent; // Cập nhật typeParent
     }
   
     // Gán lại categories nếu có
@@ -285,7 +308,7 @@ export class ProductService {
       if (newCategories.length !== categoryIds.length) {
         throw new BadRequestException('Một hoặc nhiều danh mục không tồn tại');
       }
-      existingProduct.categories = newCategories;
+      existingProduct.categories = newCategories; // Cập nhật categories
     }
   
     // Merge các giá trị primitive (chuỗi, mảng ảnh,...)
@@ -293,6 +316,7 @@ export class ProductService {
       title,
       description,
       content,
+      apply,
       origin,
       model,
       trademark,
@@ -302,14 +326,12 @@ export class ProductService {
   
     // Lưu lại thông tin đã cập nhật
     return await this.repo.save(existingProduct);
-  }
-  
-
+  }  
   async remove(id: number): Promise<Product> {
     // Tìm sản phẩm theo ID
     const product = await this.repo.findOne({
       where: { id },
-      relations: ['createdBy', 'grade', 'class', 'typeProduct', 'categories'], // Lấy các quan hệ liên quan (nếu cần)
+      relations: ['createdBy', 'grades', 'classes', 'typeProduct', 'categories', 'typeParent'],
     });
 
     // Nếu không tìm thấy sản phẩm, ném lỗi
@@ -323,4 +345,116 @@ export class ProductService {
     // Trả về sản phẩm đã bị xoá (hoặc có thể trả về một đối tượng khác nếu không cần thiết)
     return product;
   }
+  async filterProducts(query: any): Promise<Product[]> {
+    const queryBuilder = this.repo.createQueryBuilder('product')
+      .leftJoinAndSelect('product.createdBy', 'createdBy')
+      .leftJoinAndSelect('product.grades', 'grades')
+      .leftJoinAndSelect('product.classes', 'classes')
+      .leftJoinAndSelect('product.subjects', 'subjects')
+      .leftJoinAndSelect('product.typeProduct', 'typeProduct')
+      .leftJoinAndSelect('product.categories', 'categories')
+      .leftJoinAndSelect('product.typeParent', 'typeParent');
+  
+    // // Lọc theo query trực tiếp trên bảng product
+    // if (query.search) {
+    //   queryBuilder.andWhere(
+    //     `LOWER(unaccent(product.title)) ILIKE LOWER(unaccent(:search)) OR LOWER(unaccent(product.description)) ILIKE LOWER(unaccent(:search))`,
+    //     { search: `%${query.search}%` }
+    //   );
+    // }
+  
+    // Kiểm tra và xử lý grades
+    if (query.grades) {
+      const gradeIds = query.grades.split(',').map((id: string) => {
+        const parsedId = parseInt(id, 10);
+        if (isNaN(parsedId)) {
+          throw new BadRequestException(`Invalid grade ID: ${id}`);
+        }
+        return parsedId;
+      });
+      queryBuilder.andWhere('grades.id IN (:...gradeIds)', { gradeIds });
+    }
+  
+    // Kiểm tra và xử lý classes
+    if (query.classes) {
+      const classIds = query.classes.split(',').map((id: string) => {
+        const parsedId = parseInt(id, 10);
+        if (isNaN(parsedId)) {
+          throw new BadRequestException(`Invalid class ID: ${id}`);
+        }
+        return parsedId;
+      });
+      queryBuilder.andWhere('classes.id IN (:...classIds)', { classIds });
+    }
+  
+    // Kiểm tra và xử lý subjects
+    if (query.subjects) {
+      const subjectIds = query.subjects.split(',').map((id: string) => {
+        const parsedId = parseInt(id, 10);
+        if (isNaN(parsedId)) {
+          throw new BadRequestException(`Invalid subject ID: ${id}`);
+        }
+        return parsedId;
+      });
+      queryBuilder.andWhere('subjects.id IN (:...subjectIds)', { subjectIds });
+    }
+  
+    // Kiểm tra và xử lý typeProducts
+    if (query.typeProducts) {
+      const typeProductIds = query.typeProducts.split(',').map((id: string) => {
+        const parsedId = parseInt(id, 10);
+        if (isNaN(parsedId)) {
+          throw new BadRequestException(`Invalid type product ID: ${id}`);
+        }
+        return parsedId;
+      });
+      queryBuilder.andWhere('typeProduct.id IN (:...typeProductIds)', { typeProductIds });
+    }
+  
+    // Kiểm tra và xử lý categories
+    if (query.categories) {
+      const categoryIds = query.categories.split(',').map((id: string) => {
+        const parsedId = parseInt(id, 10);
+        if (isNaN(parsedId)) {
+          throw new BadRequestException(`Invalid category ID: ${id}`);
+        }
+        return parsedId;
+      });
+      queryBuilder.andWhere('categories.id IN (:...categoryIds)', { categoryIds });
+    }
+  
+    // Kiểm tra và xử lý typeParents
+    if (query.typeParents) {
+      const typeParentIds = query.typeParents.split(',').map((id: string) => {
+        const parsedId = parseInt(id, 10);
+        if (isNaN(parsedId)) {
+          throw new BadRequestException(`Invalid type parent ID: ${id}`);
+        }
+        return parsedId;
+      });
+      queryBuilder.andWhere('typeParent.id IN (:...typeParentIds)', { typeParentIds });
+    }
+  
+    // Thực hiện query và trả về các sản phẩm đã lọc
+    const products = await queryBuilder.getMany();
+  
+    // Load thêm các quan hệ còn lại nếu cần (nếu bạn muốn tải lại các thông tin chi tiết của các quan hệ)
+    for (const product of products) {
+      const fullProduct = await this.repo.findOne({
+        where: { id: product.id },
+        relations: ['classes', 'subjects', 'typeProduct', 'categories', 'typeParent'],
+      });
+  
+      product.classes = fullProduct?.classes ?? [];
+      product.subjects = fullProduct?.subjects ?? [];
+      product.typeProduct = fullProduct?.typeProduct ?? null;
+      product.categories = fullProduct?.categories ?? [];
+      product.typeParent = fullProduct?.typeParent ?? null;
+    }
+  
+    // Trả về các sản phẩm đã lọc
+    return products;
+  }
+  
+  
 }
