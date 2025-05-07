@@ -13,7 +13,7 @@ import { PageMetaDto } from 'src/common/pagination/page.metadata.dto';
 export class SolutionsService {
   constructor(
     @InjectRepository(Solution) private repo: Repository<Solution>
-  ){}
+  ) { }
   async create(createSolutionDto: CreateSolutionDto, user: User): Promise<Solution> {
     const { title, content } = createSolutionDto
 
@@ -28,69 +28,82 @@ export class SolutionsService {
   async findAll(pageOptions: PageOptionsDto, query: Partial<Solution>): Promise<PageDto<Solution>> {
     const queryBuilder = this.repo.createQueryBuilder('solution')
       .leftJoinAndSelect('solution.createdBy', 'createdBy');
-  
+
     const { page, limit, skip, order, search } = pageOptions;
     const paginationKeys = ['page', 'limit', 'skip', 'order', 'search'];
-  
+
     if (query && Object.keys(query).length > 0) {
       const filterKeys = Object.keys(query).filter(key => !paginationKeys.includes(key));
       filterKeys.forEach(key => {
         queryBuilder.andWhere(`solution.${key} = :${key}`, { [key]: query[key] });
       });
     }
-  
+
     if (search) {
       queryBuilder.andWhere(
         `LOWER(unaccent(solution.title)) ILIKE LOWER(unaccent(:search))`,
         { search: `%${search}%` }
       );
     }
-  
+
     queryBuilder.orderBy('solution.createdAt', order)
       .skip(skip)
       .take(limit);
-  
+
     const itemCount = await queryBuilder.getCount();
     const { entities } = await queryBuilder.getRawAndEntities();
     const pageMetaDto = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
-  
+
     return new PageDto(entities, pageMetaDto);
-  }  
+  }
   async findOne(id: number): Promise<Solution> {
     const solution = await this.repo.findOne({
       where: { id },
       relations: ['createdBy'],
     });
-  
+
     if (!solution) {
       throw new NotFoundException(`Không tìm thấy giải pháp với ID: ${id}`);
     }
-  
+
     return solution;
   }
 
   async update(id: number, updateSolutionDto: UpdateSolutionDto): Promise<Solution> {
     const solution = await this.repo.findOne({ where: { id } });
-  
+
     if (!solution) {
       throw new NotFoundException(`Không tìm thấy solution với ID: ${id}`);
     }
-  
+
     const updated = this.repo.merge(solution, updateSolutionDto);
     return this.repo.save(updated);
   }
-  
+  async remove(id: number): Promise<Solution> {
+    const solution = await this.repo.findOne({
+      where: { id },
+      relations: ['createdBy'],
+    });
 
-  async remove(id: number): Promise<{ message: string }> {
-    const solution = await this.repo.findOne({ where: { id } });
-  
     if (!solution) {
-      throw new NotFoundException(`Không tìm thấy solution với ID: ${id}`);
+      throw new NotFoundException('Solution không tồn tại');
     }
-  
-    await this.repo.remove(solution);
-  
-    return { message: `Đã xóa solution với ID: ${id}` };
+
+    await this.repo.softDelete({ id });
+    return solution;
   }
-  
+  async restore(id: number): Promise<Solution> {
+    const solution = await this.repo.findOne({
+      where: { id },
+      withDeleted: true,
+    });
+
+    if (!solution) {
+      throw new NotFoundException('Solution không tồn tại hoặc đã bị xoá');
+    }
+
+    await this.repo.restore(id);
+    return this.repo.findOne({ where: { id } });
+  }
+
 }

@@ -26,7 +26,6 @@ export class PostService {
     })
     return post
   }
-
   async findAll(pageOptions: PageOptionsDto, query: Partial<User>): Promise<PageDto<Post>> {
     const queryBuilder = this.repo.createQueryBuilder('post').leftJoinAndSelect('post.createdBy', 'createdBy');
     const { page, limit, skip, order, search } = pageOptions;
@@ -65,7 +64,6 @@ export class PostService {
     });
     return new PageDto(entities, pageMetaDto);
   }
-
   async findOne(id: number): Promise<Post> {
     const post = await this.repo.findOne({
       where: { id },
@@ -83,8 +81,6 @@ export class PostService {
 
     return post;
   }
-
-
   async update(id: number, updatePostDto: UpdatePostDto): Promise<Post> {
     const existingPost = await this.repo.findOne({
       where: { id },
@@ -101,14 +97,24 @@ export class PostService {
     // Lưu lại
     return await this.repo.save(merged);
   }
-
-
   async remove(id: number): Promise<Post> {
-    const post = await this.repo.findOne({ where: { id } })
+    const post = await this.repo.findOne({ where: { id } });
+  
     if (!post) {
-      throw new NotFoundException(`Không tìm thấy bài viết với ID: ${id}`)
+      throw new NotFoundException(`Không tìm thấy bài viết với ID: ${id}`);
     }
-    this.repo.delete({ id })
-    return post
+  
+    await this.repo.softDelete(id); // ✅ cập nhật deletedAt
+    return post; // Trả về bản ghi đã bị đánh dấu xóa
+  }
+  async restore(id: number): Promise<Post> {
+    const post = await this.repo.findOne({ where: { id }, withDeleted: true });
+  
+    if (!post) {
+      throw new NotFoundException(`Không tìm thấy bài viết với ID: ${id}`);
+    }
+  
+    await this.repo.restore(id); // Xóa giá trị deletedAt => khôi phục bản gh
+    return post; // Trả về bản ghi đã bị đánh dấu xóa
   }
 }

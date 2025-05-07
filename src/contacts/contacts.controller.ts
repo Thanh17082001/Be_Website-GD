@@ -45,8 +45,15 @@ export class ContactsController {
   }
 
   @Delete(':id')
+  @Public()
   remove(@Param('id') id: string, @Req() request: Request) {
     const user: User = request['user'];
     return this.contactsService.remove(+id, user);
+  }
+  @Patch('restore/:id')
+  @Public()
+  restore(@Param('id') id: string, @Req() request: Request) {
+    const user: User = request['user'];
+    return this.contactsService.restore(+id, user);
   }
 }

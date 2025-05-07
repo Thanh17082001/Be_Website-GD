@@ -47,4 +47,9 @@ export class ClassController {
   remove(@Param('id') id: string) {
     return this.classService.remove(+id);
   }
+  @Patch('restore/:id')
+  @Public()
+  restore(@Param('id') id: string) {
+    return this.classService.restore(+id);
+  }
 }

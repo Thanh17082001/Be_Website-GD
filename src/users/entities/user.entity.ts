@@ -18,6 +18,8 @@ export class User extends BaseWithCreatedBy {
     isAdmin: boolean;
     @Column()
     role: string;
+    @Column({ default: 'default-user.png' })
+    images: string;
 
     @OneToOne(() => Contact, (contact) => contact.user, { cascade: true })
     address: Contact;

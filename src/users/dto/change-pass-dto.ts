@@ -6,6 +6,9 @@ export class ChangePassDto extends OmitType(BaseDto, [] as const){
     // @ApiProperty()
     // @IsString()
     // userId: string;
+    // @ApiProperty()
+    // @IsString()
+    // oldPassword: string;
     @ApiProperty()
     @IsString()
     newPassword: string;

@@ -27,5 +27,9 @@ export class UpdateUserDto {
     @IsOptional()
     isAdmin?: boolean = false;
 
+    @IsOptional()
+    @IsString()
+    images?: string; 
+
 }
 

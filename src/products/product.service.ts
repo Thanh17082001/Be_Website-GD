@@ -327,24 +327,6 @@ export class ProductService {
     // Lưu lại thông tin đã cập nhật
     return await this.repo.save(existingProduct);
   }  
-  async remove(id: number): Promise<Product> {
-    // Tìm sản phẩm theo ID
-    const product = await this.repo.findOne({
-      where: { id },
-      relations: ['createdBy', 'grades', 'classes', 'typeProduct', 'categories', 'typeParent'],
-    });
-
-    // Nếu không tìm thấy sản phẩm, ném lỗi
-    if (!product) {
-      throw new NotFoundException(`Không tìm thấy sản phẩm với ID: ${id}`);
-    }
-
-    // Xoá sản phẩm
-    await this.repo.delete({ id });
-
-    // Trả về sản phẩm đã bị xoá (hoặc có thể trả về một đối tượng khác nếu không cần thiết)
-    return product;
-  }
   async filterProducts(query: any): Promise<Product[]> {
     const queryBuilder = this.repo.createQueryBuilder('product')
       .leftJoinAndSelect('product.createdBy', 'createdBy')
@@ -455,6 +437,31 @@ export class ProductService {
     // Trả về các sản phẩm đã lọc
     return products;
   }
+  async remove(id: number): Promise<Product> {
+    const product = await this.repo.findOne({
+      where: { id },
+      relations: ['createdBy'],
+    });
   
+    if (!product) {
+      throw new NotFoundException('Product không tồn tại');
+    }
+  
+    await this.repo.softDelete({id});
+    return product;
+  }
+  async restore(id: number): Promise<Product> {
+    const product = await this.repo.findOne({
+      where: { id },
+      withDeleted: true,
+    });
+  
+    if (!product) {
+      throw new NotFoundException('Product không tồn tại hoặc đã bị xoá');
+    }
+  
+    await this.repo.restore(id);
+    return this.repo.findOne({ where: { id } });
+  }
   
 }

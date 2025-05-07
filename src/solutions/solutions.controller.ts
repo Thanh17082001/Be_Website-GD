@@ -12,7 +12,7 @@ import { PageOptionsDto } from 'src/common/pagination/page-option-dto';
 @Controller('solutions')
 @UseGuards(AuthGuard)
 export class SolutionsController {
-  constructor(private readonly solutionsService: SolutionsService) {}
+  constructor(private readonly solutionsService: SolutionsService) { }
 
   @Post()
   @Roles(Role.ADMIN)
@@ -23,7 +23,7 @@ export class SolutionsController {
 
   @Get()
   @Public()
-  findAll(@Query() pageOptionDto: PageOptionsDto,  @Req() request: Request) {
+  findAll(@Query() pageOptionDto: PageOptionsDto, @Req() request: Request) {
     const user = request['user'] ?? null;
     return this.solutionsService.findAll(pageOptionDto, user);
   }
@@ -41,7 +41,13 @@ export class SolutionsController {
   }
 
   @Delete(':id')
+  @Public()
   remove(@Param('id') id: string) {
     return this.solutionsService.remove(+id);
+  }
+  @Patch('restore/:id')
+  @Public()
+  restore(@Param('id') id: string) {
+    return this.solutionsService.restore(+id);
   }
 }

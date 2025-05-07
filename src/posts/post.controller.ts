@@ -42,7 +42,7 @@ export class PostController {
   findOne(@Param('id') id: string) {
     return this.postService.findOne(+id);
   }
-
+  
   @Patch(':id')
   @Public()
   update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
@@ -53,5 +53,11 @@ export class PostController {
   @Public()
   remove(@Param('id') id: string) {
     return this.postService.remove(+id);
+  }
+  @Patch('restore/:id')
+  @Public()
+  @Roles(Role.ADMIN)
+  async restore(@Param('id') id: string) {
+    return this.postService.restore(+id);
   }
 }

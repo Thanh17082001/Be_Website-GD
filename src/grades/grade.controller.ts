@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Req, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Req, ParseIntPipe, NotFoundException } from '@nestjs/common';
 import { GradeService } from './grade.service';
 import { CreateGradeDto } from './dto/create-grade.dto';
 import { UpdateGradeDto } from './dto/update-grade.dto';
@@ -37,11 +37,11 @@ export class GradeController {
     // const user = request['user'] ?? null;
     return this.gradeService.findAll(pageOptionDto, query);
   }
-  @Get('by-type-parent/:typeParentId/:gradeId')
+  @Get('bytypeparent')
   @Public()
   async filterByTypeParentAndGrade(
-    @Param('typeParentId', ParseIntPipe) typeParentId: number,
-    @Param('gradeId', ParseIntPipe) gradeId: number,
+    @Query('typeParentId', ParseIntPipe) typeParentId: number,
+    @Query('gradeId', ParseIntPipe) gradeId: number,
     @Query() pageOptions: PageOptionsDto,
   ) {
     return this.gradeService.filterByTypeParentAndGrade(pageOptions, typeParentId, gradeId);
@@ -56,6 +56,16 @@ export class GradeController {
   @Public()
   update(@Param('id') id: string, @Body() updateGradeDto: UpdateGradeDto) {
     return this.gradeService.update(+id, updateGradeDto);
+  }
+  @Delete(':id')
+  @Public()
+  remove(@Param('id') id: string) {
+    return this.gradeService.remove(+id);
+  }
+  @Patch('restore/:id')
+  @Public()
+  restore(@Param('id') id: string) {
+    return this.gradeService.restore(+id);
   }
 
 }

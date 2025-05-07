@@ -51,8 +51,8 @@ export class ProductController {
     return await this.productService.create(createProductDto, user);
   }
 
-  @Get() // Đánh dấu đây là route GET
-  @Public() // Nếu bạn muốn route này công khai, có thể bỏ qua nếu không cần
+  @Get()
+  @Public()
   async findAll(@Query() pageOptionsDto: PageOptionsDto, @Req() request: Request) {
     const user = request['user'] ?? null; // Lấy user từ request (nếu có)
     return this.productService.findAll(pageOptionsDto, user); // Gọi service để lấy danh sách sản phẩm
@@ -119,6 +119,11 @@ export class ProductController {
   @Public()
   remove(@Param('id') id: string) {
     return this.productService.remove(+id);
+  }
+  @Patch('restore/:id')
+  @Public()
+  restore(@Param('id') id: string) {
+    return this.productService.restore(+id);
   }
 
 }

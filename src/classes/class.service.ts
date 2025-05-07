@@ -129,14 +129,25 @@ export class ClassService {
   
     return new ItemDto(example);
   }
-  
-
-  async remove(id: number) {
-    const example = this.repo.findOne({ where: { id } });
-    if (!example) {
-      throw new NotFoundException('Không tìm thấy tài nguyên');
+  async remove(id: number): Promise<Class> {
+    const isClass = await this.repo.findOne({ where: { id } });
+    if (!isClass) {
+      throw new NotFoundException(`Không tìm thấy lớp với ID: ${id}`);
     }
-    await this.repo.delete(id);
-    return new ItemDto(await this.repo.delete(id));
+    await this.repo.softDelete(id); // Sử dụng soft delete
+    return isClass; // Trả về dữ liệu trước khi xóa
+  }
+  async restore(id: number): Promise<Class> {
+    const isClass = await this.repo.findOne({
+      where: { id },
+      withDeleted: true, // Cho phép tìm cả bản ghi đã bị soft delete
+    });
+  
+    if (!isClass) {
+      throw new NotFoundException(`Không tìm thấy lớp đã xóa với ID: ${id}`);
+    }
+  
+    await this.repo.restore(id);
+    return isClass;
   }
 }

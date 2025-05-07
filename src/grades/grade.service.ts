@@ -67,7 +67,7 @@ export class GradeService {
         relations: [
           'typeParents',
           'typeProducts',
-          'typeProducts.createdBy',
+          // 'typeProducts.createdBy',
           'typeProducts.grades',
           'products',
           'products.createdBy',
@@ -77,18 +77,18 @@ export class GradeService {
           // 'products.categories',
           // 'products.subjects',
           'subjects',
-          'subjects.createdBy',
+          // 'subjects.createdBy',
           'subjects.grades',
-          'subjects.products',
+          // 'subjects.products',
           'subjects.classes',
           'classes',
-          'classes.createdBy',
+          // 'classes.createdBy',
           'classes.grade',
           'classes.subjects',
-          'classes.products',
+          // 'classes.products',
           'categories',
-          'categories.createdBy',
-          'categories.products',
+          // 'categories.createdBy',
+          // 'categories.products',
           'categories.grades',
         ],
       });
@@ -179,13 +179,6 @@ export class GradeService {
     queryBuilder.where('grade.id = :gradeId', { gradeId });
     queryBuilder.andWhere('typeParents.id = :typeParentId', { typeParentId }); 
 
-    // Search nếu có
-    if (search) {
-      queryBuilder.andWhere(`LOWER(unaccent(grade.name)) ILIKE LOWER(unaccent(:search))`, {
-        search: `%${search}%`,
-      });
-    }
-
     queryBuilder.orderBy('grade.name', order).skip(skip).take(limit);
 
     const itemCount = await queryBuilder.getCount();
@@ -199,38 +192,43 @@ export class GradeService {
         relations: [
           'typeProducts',
           'typeParents',
-          // 'typeProducts',
-          // 'typeProducts.createdBy',
-          // 'typeProducts.grades',
           'products',
-          // 'products.createdBy',
-          // // 'products.grades',
-          // // 'products.classes',
-          // // 'products.typeProduct',
-          // // 'products.categories',
-          // // 'products.subjects',
           'subjects',
-          // 'subjects.createdBy',
-          // 'subjects.grades',
-          // 'subjects.products',
-          // 'subjects.classes',
           'classes',
-          // 'classes.createdBy',
-          // 'classes.grade',
-          // 'classes.subjects',
-          // 'classes.products',
           'categories',
-          // 'categories.createdBy',
-          // 'categories.products',
-          // 'categories.grades',
         ],
       });
       return fullGrade!;
     }));
 
     return new PageDto(fullItems, pageMetaDto);
+  } 
+  async remove(id: number): Promise<Grade> {
+    const grade = await this.repo.findOne({
+      where: { id },
+      relations: ['createdBy'],
+    });
+  
+    if (!grade) {
+      throw new NotFoundException('Grade không tồn tại');
+    }
+  
+    await this.repo.softDelete({id});
+    return grade;
   }
-
-
-
+  async restore(id: number): Promise<Grade> {
+    const grade = await this.repo.findOne({
+      where: { id },
+      withDeleted: true,
+    });
+  
+    if (!grade) {
+      throw new NotFoundException('Grade không tồn tại hoặc đã bị xoá');
+    }
+  
+    await this.repo.restore(id);
+    return this.repo.findOne({ where: { id } });
+  }
+  
+  
 }

@@ -21,6 +21,8 @@ import { CategoriesModule } from './categories/categories.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { TypeParentsModule } from './type-parents/type-parents.module';
 import { SolutionsModule } from './solutions/solutions.module';
+import { MailProducerModule } from './mail-producer/mail-producer.module';
+import { MailConsumerController } from './mail-consumer/mail-consumer.controller';
 
 @Module({
   imports: [
@@ -60,9 +62,9 @@ import { SolutionsModule } from './solutions/solutions.module';
           console.log(error);
         }
       },
-    }), ExamplesModule, UsersModule, AuthModule, RoleModule, PostModule, GradeModule, SubjectsModule, ClassModule, ProductModule, TypeProductsModule, CategoriesModule, ContactsModule, TypeParentsModule, SolutionsModule
+    }), ExamplesModule, UsersModule, AuthModule, RoleModule, PostModule, GradeModule, SubjectsModule, ClassModule, ProductModule, TypeProductsModule, CategoriesModule, ContactsModule, TypeParentsModule, SolutionsModule, MailProducerModule
   ],
-  controllers: [],
+  controllers: [MailConsumerController],
   providers: [
     {
       provide: APP_GUARD, // Đăng ký AuthGuard cho tất cả các route

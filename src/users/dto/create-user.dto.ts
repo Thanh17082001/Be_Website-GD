@@ -14,20 +14,12 @@ export class CreateUserDto {
     @ApiProperty()
     @IsString()
     password: string;
-
-    // @IsNotEmpty()
-    // @IsNumber()
-    // schoolId: number;
-
-    // @IsArray()
-    // gradeIds: number[];
-
-    // @IsArray()
-    // subjectIds: number[];
     @ApiProperty()
     @IsOptional()
     isAdmin?: boolean = false;
     @ApiProperty()
     @IsOptional()
     role: string = 'khách hàng';
+    @ApiProperty({ type: 'string', format: 'binary', required: false })
+    images?: any;
 }
