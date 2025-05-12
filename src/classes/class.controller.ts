@@ -29,6 +29,12 @@ export class ClassController {
     const user = request['user'] ?? null;
     return this.classService.findAll(pageOptionDto, query, user);
   } 
+  @Get('findbydeleted')
+  @Public()
+  async findByDeleted(@Query() pageOptionDto: PageOptionsDto, @Query() query: Partial<Class>, @Req() request: Request) {
+    const user = request['user'] ?? null;
+    return this.classService.findByDeleted(pageOptionDto, query, user);
+  } 
 
   @Get(':id')
   @Public()

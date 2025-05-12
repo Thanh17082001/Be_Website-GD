@@ -89,7 +89,7 @@ export class ClassService {
 
     const example = await this.repo.findOne({ where: { id }, relations: ['grade', 'createdBy', 'subjects', 'products'] });
     if (!example) {
-      throw new HttpException('Not found', 404);
+      throw new NotFoundException(` Không tìm thấy lớp với ID: ${id}`)
     }
     return new ItemDto(example);
   }
@@ -150,4 +150,51 @@ export class ClassService {
     await this.repo.restore(id);
     return isClass;
   }
+  async findByDeleted(
+    pageOptions: PageOptionsDto,
+    query: Partial<Class>,
+    user: User
+  ): Promise<PageDto<Class>> {
+    const queryBuilder = this.repo
+      .createQueryBuilder('class')
+      .withDeleted()
+      .leftJoinAndSelect('class.grade', 'grade')
+      .leftJoinAndSelect('class.createdBy', 'createdBy')
+      .leftJoinAndSelect('class.products', 'products') // 👈 Join sản phẩm
+      .leftJoinAndSelect('class.subjects', 'subjects')
+      .where('class.deletedAt IS NOT NULL');
+
+    const { page, limit, skip, order, search } = pageOptions;
+    const pagination: string[] = ['page', 'limit', 'skip', 'order', 'search'];
+
+    // 🎯 Lọc theo các điều kiện cụ thể (trừ tham số phân trang)
+    if (query && Object.keys(query).length > 0) {
+      Object.keys(query).forEach((key) => {
+        if (key && !pagination.includes(key)) {
+          queryBuilder.andWhere(`class.${key} = :${key}`, { [key]: query[key] });
+        }
+      });
+    }
+
+    // 🔎 Tìm kiếm theo tên lớp học (không phân biệt dấu và chữ hoa/thường)
+    if (search) {
+      queryBuilder.andWhere(
+        `LOWER(unaccent(class.name)) ILIKE LOWER(unaccent(:search))`,
+        { search: `%${search}%` }
+      );
+    }
+
+    // 📄 Phân trang và sắp xếp
+    queryBuilder
+      .orderBy('class.createdAt', order)
+      .skip(skip)
+      .take(limit);
+
+    const itemCount = await queryBuilder.getCount();
+    const { entities } = await queryBuilder.getRawAndEntities();
+
+    return new PageDto(entities, new PageMetaDto({ pageOptionsDto: pageOptions, itemCount }));
+
+  }
 }
+ 

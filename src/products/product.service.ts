@@ -145,10 +145,10 @@ export class ProductService {
       .leftJoinAndSelect('product.createdBy', 'createdBy')
       .leftJoinAndSelect('product.grades', 'grades')
       .leftJoinAndSelect('product.typeParent', 'typeParent');
-
+  
     const { page, limit, skip, order, search } = pageOptions;
     const pagination: string[] = ['page', 'limit', 'skip', 'order', 'search'];
-
+  
     // Lọc theo query
     if (!!query && Object.keys(query).length > 0) {
       const arrayQuery: string[] = Object.keys(query);
@@ -158,7 +158,7 @@ export class ProductService {
         }
       });
     }
-
+  
     // Tìm kiếm theo title hoặc description
     if (search) {
       queryBuilder.andWhere(
@@ -166,31 +166,31 @@ export class ProductService {
         { search: `%${search}%` }
       );
     }
-
-    // Phân trang
-    queryBuilder.orderBy(`product.createdAt`, order)
+  
+    // Phân trang và sắp xếp theo ID
+    queryBuilder.orderBy(`product.id`, order)
       .skip(skip)
       .take(limit);
-
+  
     const itemCount = await queryBuilder.getCount();
     const pageMetaDto = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
-
+  
     const items = await queryBuilder.getMany();
-
-    // Load 4 quan hệ còn lại: classes, subjects, typeProduct, categories
+  
+    // Load thêm các quan hệ còn lại
     for (const product of items) {
       const fullProduct = await this.repo.findOne({
         where: { id: product.id },
         relations: ['classes', 'subjects', 'typeProduct', 'categories', 'typeParent'],
       });
-
+  
       product.classes = fullProduct?.classes ?? [];
       product.subjects = fullProduct?.subjects ?? [];
       product.typeProduct = fullProduct?.typeProduct ?? null;
       product.categories = fullProduct?.categories ?? [];
     }
-
-    // Map lại images thành URL đầy đủ
+  
+    // Gắn URL đầy đủ cho ảnh
     const hostUrl = process.env.HOST_API_URL || 'http://192.168.1.45:3087';
     const mappedEntities = items.map((product) => {
       if (product.images && product.images.length > 0) {
@@ -198,7 +198,7 @@ export class ProductService {
       }
       return product;
     });
-
+  
     return new PageDto(mappedEntities, pageMetaDto);
   }
   async findOne(id: number): Promise<Product> {
@@ -337,90 +337,54 @@ export class ProductService {
       .leftJoinAndSelect('product.categories', 'categories')
       .leftJoinAndSelect('product.typeParent', 'typeParent');
   
-    // // Lọc theo query trực tiếp trên bảng product
-    // if (query.search) {
-    //   queryBuilder.andWhere(
-    //     `LOWER(unaccent(product.title)) ILIKE LOWER(unaccent(:search)) OR LOWER(unaccent(product.description)) ILIKE LOWER(unaccent(:search))`,
-    //     { search: `%${query.search}%` }
-    //   );
-    // }
-  
-    // Kiểm tra và xử lý grades
-    if (query.grades) {
-      const gradeIds = query.grades.split(',').map((id: string) => {
+    // Helper để parse và validate ID
+    const parseIds = (param: string, label: string): number[] => {
+      return param.split(',').map((id: string) => {
         const parsedId = parseInt(id, 10);
         if (isNaN(parsedId)) {
-          throw new BadRequestException(`Invalid grade ID: ${id}`);
+          throw new BadRequestException(`Invalid ${label} ID: ${id}`);
         }
         return parsedId;
       });
-      queryBuilder.andWhere('grades.id IN (:...gradeIds)', { gradeIds });
+    };
+  
+    // Lọc theo từng điều kiện, đảm bảo loại null
+    if (query.gradeId) {
+      const gradeIds = parseIds(query.gradeId, 'grade');
+      queryBuilder.andWhere('grades.id IS NOT NULL AND grades.id IN (:...gradeIds)', { gradeIds });
     }
   
-    // Kiểm tra và xử lý classes
     if (query.classes) {
-      const classIds = query.classes.split(',').map((id: string) => {
-        const parsedId = parseInt(id, 10);
-        if (isNaN(parsedId)) {
-          throw new BadRequestException(`Invalid class ID: ${id}`);
-        }
-        return parsedId;
-      });
-      queryBuilder.andWhere('classes.id IN (:...classIds)', { classIds });
+      const classIds = parseIds(query.classes, 'class');
+      queryBuilder.andWhere('classes.id IS NOT NULL AND classes.id IN (:...classIds)', { classIds });
     }
   
-    // Kiểm tra và xử lý subjects
     if (query.subjects) {
-      const subjectIds = query.subjects.split(',').map((id: string) => {
-        const parsedId = parseInt(id, 10);
-        if (isNaN(parsedId)) {
-          throw new BadRequestException(`Invalid subject ID: ${id}`);
-        }
-        return parsedId;
-      });
-      queryBuilder.andWhere('subjects.id IN (:...subjectIds)', { subjectIds });
+      const subjectIds = parseIds(query.subjects, 'subject');
+      queryBuilder.andWhere('subjects.id IS NOT NULL AND subjects.id IN (:...subjectIds)', { subjectIds });
     }
   
-    // Kiểm tra và xử lý typeProducts
     if (query.typeProducts) {
-      const typeProductIds = query.typeProducts.split(',').map((id: string) => {
-        const parsedId = parseInt(id, 10);
-        if (isNaN(parsedId)) {
-          throw new BadRequestException(`Invalid type product ID: ${id}`);
-        }
-        return parsedId;
-      });
-      queryBuilder.andWhere('typeProduct.id IN (:...typeProductIds)', { typeProductIds });
+      const typeProductIds = parseIds(query.typeProducts, 'type product');
+      queryBuilder.andWhere('typeProduct.id IS NOT NULL AND typeProduct.id IN (:...typeProductIds)', { typeProductIds });
     }
   
-    // Kiểm tra và xử lý categories
     if (query.categories) {
-      const categoryIds = query.categories.split(',').map((id: string) => {
-        const parsedId = parseInt(id, 10);
-        if (isNaN(parsedId)) {
-          throw new BadRequestException(`Invalid category ID: ${id}`);
-        }
-        return parsedId;
-      });
-      queryBuilder.andWhere('categories.id IN (:...categoryIds)', { categoryIds });
+      const categoryIds = parseIds(query.categories, 'category');
+      queryBuilder.andWhere('categories.id IS NOT NULL AND categories.id IN (:...categoryIds)', { categoryIds });
     }
   
-    // Kiểm tra và xử lý typeParents
-    if (query.typeParents) {
-      const typeParentIds = query.typeParents.split(',').map((id: string) => {
-        const parsedId = parseInt(id, 10);
-        if (isNaN(parsedId)) {
-          throw new BadRequestException(`Invalid type parent ID: ${id}`);
-        }
-        return parsedId;
-      });
-      queryBuilder.andWhere('typeParent.id IN (:...typeParentIds)', { typeParentIds });
+    if (query.typeParentId) {
+      const typeParentIds = parseIds(query.typeParentId, 'type parent');
+      queryBuilder.andWhere('typeParent.id IS NOT NULL AND typeParent.id IN (:...typeParentIds)', { typeParentIds });
     }
   
-    // Thực hiện query và trả về các sản phẩm đã lọc
+    // ✅ Sắp xếp theo product.id
+    queryBuilder.orderBy('product.id', 'ASC');
+  
     const products = await queryBuilder.getMany();
   
-    // Load thêm các quan hệ còn lại nếu cần (nếu bạn muốn tải lại các thông tin chi tiết của các quan hệ)
+    // Load lại đầy đủ các quan hệ
     for (const product of products) {
       const fullProduct = await this.repo.findOne({
         where: { id: product.id },
@@ -434,7 +398,6 @@ export class ProductService {
       product.typeParent = fullProduct?.typeParent ?? null;
     }
   
-    // Trả về các sản phẩm đã lọc
     return products;
   }
   async remove(id: number): Promise<Product> {

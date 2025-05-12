@@ -34,9 +34,11 @@ export class GradeController {
   @Get()
   @Public()
   async findAll(@Query() pageOptionDto: PageOptionsDto, @Query() query: Partial<Grade>, @Req() request: Request) {
+    // console.log('1')
     // const user = request['user'] ?? null;
     return this.gradeService.findAll(pageOptionDto, query);
   }
+
   @Get('bytypeparent')
   @Public()
   async filterByTypeParentAndGrade(
@@ -46,6 +48,7 @@ export class GradeController {
   ) {
     return this.gradeService.filterByTypeParentAndGrade(pageOptions, typeParentId, gradeId);
   }
+  
   @Get(':id')
   @Public()
   findOne(@Param('id') id: string) {

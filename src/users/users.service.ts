@@ -44,7 +44,7 @@ export class UsersService {
       images: images,
       isAdmin: isAdmin ?? false,
     });
-  
+
     return user;
   }
   async changePassword(dto: ChangePassDto, user: User): Promise<User> {

@@ -1,3 +1,5 @@
+import { CartDetail } from "src/cart-detail/entities/cart-detail.entity";
+import { Cart } from "src/carts/entities/cart.entity";
 import { Category } from "src/categories/entities/category.entity";
 import { Class } from "src/classes/entities/class.entity";
 import { BaseWithCreatedBy } from "src/common/entities/base-user-createdBy";
@@ -5,7 +7,7 @@ import { Grade } from "src/grades/entities/grade.entity";
 import { Subject } from "src/subjects/entities/subject.entity";
 import { TypeParent } from "src/type-parents/entities/type-parent.entity";
 import { TypeProduct } from "src/type-products/entities/type-product.entity";
-import { Column, Entity, JoinTable, ManyToMany, ManyToOne } from "typeorm";
+import { Column, Entity, JoinTable, ManyToMany, ManyToOne, OneToMany } from "typeorm";
 
 @Entity()
 export class Product extends BaseWithCreatedBy {
@@ -57,4 +59,7 @@ export class Product extends BaseWithCreatedBy {
 
     @ManyToOne(() => TypeParent, typeParent => typeParent.products, { nullable: true, onDelete: 'SET NULL' })
     typeParent: TypeParent;
+
+    @OneToMany(() => CartDetail, (detail) => detail.product)
+    cartDetails: CartDetail[];
 }

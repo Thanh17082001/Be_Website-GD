@@ -23,6 +23,8 @@ import { TypeParentsModule } from './type-parents/type-parents.module';
 import { SolutionsModule } from './solutions/solutions.module';
 import { MailProducerModule } from './mail-producer/mail-producer.module';
 import { MailConsumerController } from './mail-consumer/mail-consumer.controller';
+import { CartsModule } from './carts/carts.module';
+import { CartDetailModule } from './cart-detail/cart-detail.module';
 
 @Module({
   imports: [
@@ -62,7 +64,7 @@ import { MailConsumerController } from './mail-consumer/mail-consumer.controller
           console.log(error);
         }
       },
-    }), ExamplesModule, UsersModule, AuthModule, RoleModule, PostModule, GradeModule, SubjectsModule, ClassModule, ProductModule, TypeProductsModule, CategoriesModule, ContactsModule, TypeParentsModule, SolutionsModule, MailProducerModule
+    }), ExamplesModule, UsersModule, AuthModule, RoleModule, PostModule, GradeModule, SubjectsModule, ClassModule, ProductModule, TypeProductsModule, CategoriesModule, ContactsModule, TypeParentsModule, SolutionsModule, MailProducerModule, CartsModule, CartDetailModule
   ],
   controllers: [MailConsumerController],
   providers: [

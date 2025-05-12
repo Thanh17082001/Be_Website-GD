@@ -8,11 +8,13 @@ import { ItemDto, PageDto } from 'src/common/pagination/page.dto';
 import { PageOptionsDto } from 'src/common/pagination/page-option-dto';
 import { PageMetaDto } from 'src/common/pagination/page.metadata.dto';
 import { User } from 'src/users/entities/user.entity';
+import { TypeParent } from 'src/type-parents/entities/type-parent.entity';
 
 @Injectable()
 export class GradeService {
   constructor(
-    @InjectRepository(Grade) private repo: Repository<Grade>
+    @InjectRepository(Grade) private repo: Repository<Grade>,
+    @InjectRepository(TypeParent) private typeParentRepo: Repository<TypeParent>,
   ) { }
   async create(createGradeDto: CreateGradeDto, user: User): Promise<Grade> {
     const { name } = createGradeDto;
@@ -32,69 +34,65 @@ export class GradeService {
       .leftJoinAndSelect('grade.classes', 'classes')
       .leftJoinAndSelect('grade.categories', 'categories')
       .leftJoinAndSelect('grade.typeParents', 'typeParents');
-
-    const { page, limit, skip, order, search } = pageOptions;
+  
+    const { skip, limit, order = 'ASC', search } = pageOptions; 
     const pagination: string[] = ['page', 'limit', 'skip', 'order', 'search'];
-
-    if (!!query && Object.keys(query).length > 0) {
-      const arrayQuery: string[] = Object.keys(query);
-      arrayQuery.forEach((key) => {
-        if (key && !pagination.includes(key)) {
+  
+    if (query && Object.keys(query).length > 0) {
+      Object.keys(query).forEach((key) => {
+        if (!pagination.includes(key)) {
           queryBuilder.andWhere(`grade.${key} = :${key}`, { [key]: query[key] });
         }
       });
     }
-
+  
     if (search) {
       queryBuilder.andWhere(`LOWER(unaccent(grade.name)) ILIKE LOWER(unaccent(:search))`, {
         search: `%${search}%`,
       });
     }
-
-    queryBuilder.orderBy(`grade.name`, 'ASC')
-      .skip(skip)
-      .take(limit);
-
+  
+    queryBuilder.orderBy('grade.id', order).skip(skip).take(limit);
+  
     const itemCount = await queryBuilder.getCount();
     const pageMetaDto = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
 
+  
     const items = await queryBuilder.getMany();
-
-    // Load full relations giống findOne
+  
+    // Load đầy đủ quan hệ
     const fullItems = await Promise.all(items.map(async (grade) => {
       const fullGrade = await this.repo.findOne({
         where: { id: grade.id },
         relations: [
           'typeParents',
           'typeProducts',
-          // 'typeProducts.createdBy',
-          'typeProducts.grades',
+          // 'typeProducts.grades',
           'products',
-          'products.createdBy',
+          // 'products.createdBy',
           // 'products.grades',
-          // 'products.classes',
-          // 'products.typeProduct',
-          // 'products.categories',
-          // 'products.subjects',
           'subjects',
-          // 'subjects.createdBy',
-          'subjects.grades',
-          // 'subjects.products',
-          'subjects.classes',
+          // 'subjects.grades',
+          // 'subjects.classes',
           'classes',
-          // 'classes.createdBy',
-          'classes.grade',
-          'classes.subjects',
-          // 'classes.products',
+          // 'classes.grade',
+          // 'classes.subjects',
           'categories',
-          // 'categories.createdBy',
-          // 'categories.products',
-          'categories.grades',
+          // 'categories.grades',
         ],
       });
+  
+      // Map ảnh cho mỗi product
+      const hostUrl = process.env.HOST_API_URL || 'http://192.168.1.16:3087';
+      fullGrade?.products?.forEach((product) => {
+        if (Array.isArray(product.images)) {
+          product.images = product.images.map((imgPath) => `${hostUrl}/api/${imgPath}`);
+        }
+      });
+  
       return fullGrade!;
     }));
-
+  
     return new PageDto(fullItems, pageMetaDto);
   }
   async findOne(id: number): Promise<ItemDto<Grade>> {
@@ -166,43 +164,82 @@ export class GradeService {
     typeParentId: number,
     gradeId: number,
   ): Promise<PageDto<Grade>> {
+    // Kiểm tra gradeId
+    const gradeExists = await this.repo.findOne({ where: { id: gradeId } });
+    if (!gradeExists) {
+      throw new NotFoundException(`Không tìm thấy grade với id = ${gradeId}`);
+    }
+  
+    // Kiểm tra typeParentId
+    const typeParentExists = await this.typeParentRepo.findOne({ where: { id: typeParentId } });
+    if (!typeParentExists) {
+      throw new NotFoundException(`Không tìm thấy typeParent với id = ${typeParentId}`);
+    }
+  
+    const { skip, limit, order } = pageOptions;
+  
     const queryBuilder = this.repo.createQueryBuilder('grade')
+      .leftJoin('grade.products', 'product')
+      .leftJoin('product.typeParent', 'typeParent')
       .leftJoinAndSelect('grade.typeProducts', 'typeProducts')
       .leftJoinAndSelect('grade.subjects', 'subjects')
       .leftJoinAndSelect('grade.classes', 'classes')
       .leftJoinAndSelect('grade.categories', 'categories')
-      .leftJoinAndSelect('grade.typeParents', 'typeParents');
-
-    const { skip, limit, order, search } = pageOptions;
-
-    // Lọc theo typeParentId và gradeId
-    queryBuilder.where('grade.id = :gradeId', { gradeId });
-    queryBuilder.andWhere('typeParents.id = :typeParentId', { typeParentId }); 
-
-    queryBuilder.orderBy('grade.name', order).skip(skip).take(limit);
-
+      .leftJoinAndSelect('grade.typeParents', 'typeParents')
+      .where('grade.id = :gradeId', { gradeId })
+      .orderBy('grade.id', order)
+      .skip(skip)
+      .take(limit);
+  
     const itemCount = await queryBuilder.getCount();
     const pageMetaDto = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
+  
     const items = await queryBuilder.getMany();
-
-    // Load full relations
+  
     const fullItems = await Promise.all(items.map(async (grade) => {
       const fullGrade = await this.repo.findOne({
         where: { id: grade.id },
         relations: [
+          'products',
+          'products.typeParent',
+          'products.createdBy',
+          'products.grades',
+          'products.classes',
+          'products.subjects',
+          'products.typeProduct',
+          'products.categories',
           'typeProducts',
           'typeParents',
-          'products',
           'subjects',
           'classes',
           'categories',
         ],
       });
+  
+      const hostUrl = process.env.HOST_API_URL || 'http://localhost:3087';
+  
+      if (fullGrade?.products) {
+        fullGrade.products = fullGrade.products.filter(product =>
+          product.typeParent && product.typeParent.id === typeParentId
+        );
+  
+        fullGrade.products.forEach((product) => {
+          if (Array.isArray(product.images)) {
+            product.images = product.images.map(img => `${hostUrl}/api/${img}`);
+          }
+        });
+      }
+  
+      if (fullGrade?.classes) {
+        fullGrade.classes.sort((a, b) => a.id - b.id);
+      }
+  
       return fullGrade!;
     }));
-
+  
     return new PageDto(fullItems, pageMetaDto);
-  } 
+  }
+  
   async remove(id: number): Promise<Grade> {
     const grade = await this.repo.findOne({
       where: { id },

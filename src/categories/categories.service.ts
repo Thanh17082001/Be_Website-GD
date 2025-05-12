@@ -43,9 +43,8 @@ export class CategoriesService {
     }
     // console.log(newCategory)
     return await this.repo.save(newCategory)
-    
-  }
 
+  }
   async findAll(
     pageOptions: PageOptionsDto,
     query: Partial<Category>
@@ -85,8 +84,6 @@ export class CategoriesService {
 
     return new PageDto(entities, pageMetaDto);
   }
-
-
   async findOne(id: number): Promise<Category> {
     const category = await this.repo.findOne({
       where: { id },
@@ -99,7 +96,6 @@ export class CategoriesService {
 
     return category
   }
-
   async update(id: number, updateCategoryDto: UpdateCategoryDto) {
     // console.log(id)
     const { name, grades } = updateCategoryDto
@@ -143,18 +139,73 @@ export class CategoriesService {
     return await this.repo.save(existingCategory);
 
   }
-
-  async remove(id: number): Promise<void> {
+  async remove(id: number): Promise<Category> {
     const category = await this.repo.findOne({
       where: { id },
-      relations: ['products'], // Load luôn để tránh lỗi nếu có ràng buộc
+      // relations: ['createdBy'],
     });
 
     if (!category) {
-      throw new NotFoundException('Không tìm thấy danh mục này!');
+      throw new NotFoundException('Category không tồn tại');
     }
 
-    await this.repo.remove(category);
+    await this.repo.softDelete({ id });
+    return category;
   }
+  async restore(id: number): Promise<Category> {
+    const category = await this.repo.findOne({
+      where: { id },
+      withDeleted: true,
+    });
+
+    if (!category) {
+      throw new NotFoundException('Category không tồn tại hoặc đã bị xoá');
+    }
+
+    await this.repo.restore(id);
+    return this.repo.findOne({ where: { id } });
+  }
+  async findByDeleted(
+    pageOptions: PageOptionsDto,
+    query: Partial<Category>
+  ): Promise<PageDto<Category>> {
+    const queryBuilder = this.repo.createQueryBuilder('category')
+      .withDeleted() // <- Quan trọng: lấy cả dữ liệu đã bị soft delete
+      .leftJoinAndSelect('category.products', 'products')
+      .leftJoinAndSelect('category.grades', 'grades')
+      .where('category.deletedAt IS NOT NULL'); // <- Lọc chỉ các bản ghi đã bị soft-delete
+  
+    const { page, limit, skip, order, search } = pageOptions;
+    const paginationParams = ['page', 'limit', 'skip', 'order', 'search'];
+  
+    // Lọc theo các trường khác
+    if (query && Object.keys(query).length > 0) {
+      Object.keys(query).forEach((key) => {
+        if (!paginationParams.includes(key) && query[key] !== undefined) {
+          queryBuilder.andWhere(`category.${key} = :${key}`, { [key]: query[key] });
+        }
+      });
+    }
+  
+    // Tìm kiếm theo tên
+    if (search) {
+      queryBuilder.andWhere(
+        `LOWER(unaccent(category.name)) ILIKE LOWER(unaccent(:search))`,
+        { search: `%${search}%` }
+      );
+    }
+  
+    queryBuilder
+      .orderBy('category.createdAt', order)
+      .skip(skip)
+      .take(limit);
+  
+    const itemCount = await queryBuilder.getCount();
+    const pageMetaDto = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
+    const { entities } = await queryBuilder.getRawAndEntities();
+  
+    return new PageDto(entities, pageMetaDto);
+  }
+  
 
 }

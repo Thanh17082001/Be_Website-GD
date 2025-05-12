@@ -49,4 +49,9 @@ export class SubjectsController {
   remove(@Param('id') id: string) {
     return this.subjectsService.remove(+id);
   }
+  @Patch('restore/:id')
+  @Public()
+  restore(@Param('id') id: string) {
+    return this.subjectsService.restore(+id);
+  }
 }

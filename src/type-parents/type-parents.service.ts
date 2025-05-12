@@ -169,18 +169,30 @@ export class TypeParentsService {
     // Lưu lại đối tượng TypeParent đã được cập nhật
     return this.repo.save(merged);
   }
-  async remove(id: number): Promise<void> {
-    // Tìm TypeParent theo ID
-    const typeParent = await this.repo.findOne({
-      where: { id },
-      relations: ['grades'],  // Nếu cần, có thể lấy thêm các quan hệ khác như grades
-    });
-
-    if (!typeParent) {
-      throw new NotFoundException(`Không tìm thấy loại (Type-Parents) với ID: ${id}`);
+  async remove(id: number): Promise<TypeParent> {
+      const typeParent = await this.repo.findOne({
+        where: { id },
+        relations: ['createdBy'],
+      });
+  
+      if (!typeParent) {
+        throw new NotFoundException('TypeParent không tồn tại');
+      }
+  
+      await this.repo.softDelete({ id });
+      return typeParent;
     }
-
-    // Xóa đối tượng TypeParent
-    await this.repo.remove(typeParent);
-  }
+    async restore(id: number): Promise<TypeParent> {
+      const typeParent = await this.repo.findOne({
+        where: { id },
+        withDeleted: true,
+      });
+  
+      if (!typeParent) {
+        throw new NotFoundException('TypeParent không tồn tại hoặc đã bị xoá');
+      }
+  
+      await this.repo.restore(id);
+      return this.repo.findOne({ where: { id } });
+    }
 }

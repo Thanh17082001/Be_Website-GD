@@ -22,11 +22,11 @@ export class SubjectsService {
   ) { }
   async create(createSubjectDto: CreateSubjectDto, user: User) {
     const { name, grades, classes } = createSubjectDto;
-  
+
     // Chuyển grades và classes thành mảng số
     const gradeIds = grades.map(grade => parseInt(grade));
     const classIds = classes.map(classId => parseInt(classId));
-  
+
     // Kiểm tra tên môn học đã tồn tại trong khối chưa
     const existing = await this.repo.findOne({
       where: {
@@ -35,30 +35,30 @@ export class SubjectsService {
       },
       relations: ['grades'],
     });
-  
+
     if (existing) {
       throw new HttpException('Tên môn học đã tồn tại trong khối này', 409);
     }
-  
+
     // Tìm khối
     const gradesData = await this.repoGrade.find({
       where: { id: In(gradeIds) },  // Tìm theo mảng gradeIds
     });
-  
+
     if (gradesData.length !== gradeIds.length) {
       throw new HttpException('Một hoặc nhiều khối không tồn tại', 404);
     }
-  
+
     // Kiểm tra danh sách lớp
     let newClasses: Class[] = [];
     if (classIds.length > 0) {
       newClasses = await this.repoClass.findBy({ id: In(classIds) });
-  
+
       if (newClasses.length !== classIds.length) {
         throw new HttpException('Một hoặc nhiều lớp không tồn tại', 404);
       }
     }
-  
+
     // Tạo subject mới
     const newSubject = this.repo.create({
       name,
@@ -69,18 +69,15 @@ export class SubjectsService {
     // console.log(newSubject)
     return await this.repo.save(newSubject);
   }
-  
-
-
   async findAll(
     pageOptions: PageOptionsDto,
     query: Partial<Subject>
   ): Promise<PageDto<Subject>> {
     const queryBuilder = this.repo.createQueryBuilder('subject')
-    .leftJoinAndSelect('subject.createdBy', 'createdBy')
-    .leftJoinAndSelect('subject.products', 'product')
-    .leftJoinAndSelect('subject.classes', 'class')
-    .leftJoinAndSelect('subject.grades', 'grades') // Join grade
+      .leftJoinAndSelect('subject.createdBy', 'createdBy')
+      .leftJoinAndSelect('subject.products', 'product')
+      .leftJoinAndSelect('subject.classes', 'class')
+      .leftJoinAndSelect('subject.grades', 'grades') // Join grade
 
     const { page, limit, skip, order, search } = pageOptions;
     const paginationParams = ['page', 'limit', 'skip', 'order', 'search'];
@@ -113,8 +110,6 @@ export class SubjectsService {
 
     return new PageDto(entities, pageMetaDto);
   }
-
-
   async findOne(id: number): Promise<Subject> {
     const subject = await this.repo.findOne({
       where: { id },
@@ -127,10 +122,9 @@ export class SubjectsService {
 
     return subject;
   }
-
   async update(id: number, updateSubjectDto: UpdateSubjectDto): Promise<Subject> {
     const { name, grades, classes } = updateSubjectDto;
-  
+
     // Kiểm tra trùng tên môn học với môn học khác (không trùng với id hiện tại)
     const isDuplicate = await this.repo.findOne({
       where: {
@@ -140,49 +134,49 @@ export class SubjectsService {
       },
       relations: ['grades'],
     });
-  
+
     if (isDuplicate) {
       throw new BadRequestException('Tên môn học đã tồn tại trong khối này');
     }
-  
+
     // Tìm môn học hiện tại
     const existingSubject = await this.repo.findOne({
       where: { id },
       relations: ['createdBy', 'grades', 'products', 'classes'],
     });
-  
+
     if (!existingSubject) {
       throw new BadRequestException('Không tìm thấy môn học này!');
     }
-  
+
     // Cập nhật Grade nếu có thay đổi
     if (grades && grades.length > 0) {
       const gradeIds = grades.map(grade => parseInt(grade));  // Chuyển grade từ chuỗi thành số
       const foundGrades = await this.repoGrade.find({
         where: { id: In(gradeIds) },  // Tìm theo mảng grades
       });
-  
+
       if (foundGrades.length !== gradeIds.length) {
         throw new NotFoundException('Một hoặc nhiều khối không tồn tại');
       }
-  
+
       existingSubject.grades = foundGrades;  // Cập nhật lại grades với đối tượng Grade
     }
-  
+
     // Cập nhật Classes nếu có thay đổi
     if (classes && classes.length > 0) {
       const classIds = classes.map(classId => parseInt(classId));  // Chuyển classId từ chuỗi thành số
       const foundClasses = await this.repoClass.find({
         where: { id: In(classIds) },
       });
-  
+
       if (foundClasses.length !== classIds.length) {
         throw new BadRequestException('Một hoặc nhiều lớp không tồn tại');
       }
-  
+
       existingSubject.classes = foundClasses;  // Cập nhật lại classes với đối tượng Class
     }
-  
+
     // Merge các giá trị khác vào môn học hiện tại
     const merged = this.repo.merge(existingSubject, {
       name,  // Cập nhật tên môn học
@@ -190,20 +184,35 @@ export class SubjectsService {
       classes: undefined,  // Đảm bảo không trùng lặp khi merge
       grades: undefined,  // Đảm bảo không trùng lặp khi merge
     });
-  
+
     // Lưu và trả về môn học đã được cập nhật
     return await this.repo.save(merged);
   }
-    
-
-  async remove(id: number): Promise<void> {
-    const subject = await this.repo.findOne({ where: { id } });
+  async remove(id: number): Promise<Subject> {
+    const subject = await this.repo.findOne({
+      where: { id },
+      relations: ['createdBy'],
+    });
 
     if (!subject) {
-      throw new NotFoundException(`Không tìm thấy môn học với ID: ${id}`);
+      throw new NotFoundException('Subject không tồn tại');
     }
 
-    await this.repo.remove(subject); // Hard delete: xóa vĩnh viễn
+    await this.repo.softDelete({ id });
+    return subject;
+  }
+  async restore(id: number): Promise<Subject> {
+    const subject = await this.repo.findOne({
+      where: { id },
+      withDeleted: true,
+    });
+
+    if (!subject) {
+      throw new NotFoundException('Subject không tồn tại hoặc đã bị xoá');
+    }
+
+    await this.repo.restore(id);
+    return this.repo.findOne({ where: { id } });
   }
 
 }

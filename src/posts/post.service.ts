@@ -81,22 +81,15 @@ export class PostService {
 
     return post;
   }
-  async update(id: number, updatePostDto: UpdatePostDto): Promise<Post> {
-    const existingPost = await this.repo.findOne({
-      where: { id },
-      relations: ['createdBy'],
-    });
-
-    if (!existingPost) {
-      throw new BadRequestException('Không tìm thấy tin tức này!');
-    }
-
-    // Merge update DTO vào bản ghi cũ
-    const merged = this.repo.merge(existingPost, updatePostDto);
-
-    // Lưu lại
-    return await this.repo.save(merged);
+  async update(id: number, updatePostDto: UpdatePostDto, user?: User) {
+  const post = await this.repo.findOne({ where: { id } });
+  if (!post) {
+    throw new NotFoundException('Post không tồn tại');
   }
+
+  Object.assign(post, updatePostDto); // gộp field
+  return this.repo.save(post);
+}
   async remove(id: number): Promise<Post> {
     const post = await this.repo.findOne({ where: { id } });
   

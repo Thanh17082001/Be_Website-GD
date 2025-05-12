@@ -31,7 +31,15 @@ export class CategoriesController {
     const user = request['user'] ?? null;
     return this.categoriesService.findAll(pageOptionsDto, user);
   }
-
+  @Get('findbydeleted')
+  @Public()
+  async findByDeleted(
+    @Query() pageOptionsDto: PageOptionsDto,
+    @Req() request: Request
+  ) {
+    const user = request['user'] ?? null;
+    return this.categoriesService.findByDeleted(pageOptionsDto, user);
+  }
   @Get(':id')
   @Public()
   findOne(@Param('id') id: string) {
@@ -49,4 +57,10 @@ export class CategoriesController {
   remove(@Param('id') id: string) {
     return this.categoriesService.remove(+id);
   }
+  @Patch('restore/:id')
+  @Public()
+  restore(@Param('id') id: string) {
+    return this.categoriesService.restore(+id);
+  }
 }
+ 

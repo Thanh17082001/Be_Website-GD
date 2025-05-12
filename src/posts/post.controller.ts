@@ -16,23 +16,23 @@ import { multerOptions, storage } from 'src/config/multer';
 @Controller('posts')
 @UseGuards(AuthGuard)
 export class PostController {
-  constructor(private readonly postService: PostService) {}
+  constructor(private readonly postService: PostService) { }
 
   @Post()
   @Roles(Role.ADMIN)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('images', { storage: storage('post', true), ...multerOptions }))
-  create(@UploadedFile() images: Express.Multer.File,@Body() createPostDto: CreatePostDto, @Req() request: Request) {
+  create(@UploadedFile() images: Express.Multer.File, @Body() createPostDto: CreatePostDto, @Req() request: Request) {
     // console.log('Image:', image);
     // console.log('Body:', createPostDto);
     const user: User = request['user'] ?? null;
     const filePath = `public/post/image/${images.filename}`;
-    return this.postService.create({...createPostDto, images: filePath}, user); 
+    return this.postService.create({ ...createPostDto, images: filePath }, user);
   }
 
   @Get()
   @Public()
-  async findAll(@Query() pageOptionDto: PageOptionsDto,  @Req() request: Request) {
+  async findAll(@Query() pageOptionDto: PageOptionsDto, @Req() request: Request) {
     const user = request['user'] ?? null;
     return this.postService.findAll(pageOptionDto, user);
   }
@@ -42,11 +42,26 @@ export class PostController {
   findOne(@Param('id') id: string) {
     return this.postService.findOne(+id);
   }
-  
+
   @Patch(':id')
   @Public()
-  update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
-    return this.postService.update(+id, updatePostDto);
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('images', { storage: storage('post', true), ...multerOptions }))
+  update(
+    @Param('id') id: string,
+    @UploadedFile() images: Express.Multer.File,
+    @Body() updatePostDto: UpdatePostDto,
+    @Req() request: Request,
+  ) {
+    const user: User = request['user'] ?? null;
+
+    // Nếu có file ảnh mới được upload thì cập nhật đường dẫn vào DTO
+    if (images) {
+      const filePath = `public/post/image/${images.filename}`;
+      updatePostDto.images = filePath;
+    }
+
+    return this.postService.update(+id, updatePostDto, user);
   }
 
   @Delete(':id')

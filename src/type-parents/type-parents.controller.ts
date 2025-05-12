@@ -39,14 +39,14 @@ export class TypeParentsController {
     return this.typeParentsService.findOne(+id);
   }
 
-  @Patch(':id')
-  @Public()
-  update(@Param('id') id: string, @Body() updateTypeParentDto: UpdateTypeParentDto) {
-    return this.typeParentsService.update(+id, updateTypeParentDto);
-  }
-
   @Delete(':id')
+  @Public()
   remove(@Param('id') id: string) {
     return this.typeParentsService.remove(+id);
+  }
+  @Patch('restore/:id')
+  @Public()
+  restore(@Param('id') id: string) {
+    return this.typeParentsService.restore(+id);
   }
 }
