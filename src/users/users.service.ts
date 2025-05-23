@@ -104,12 +104,12 @@ export class UsersService {
     const items = await queryBuilder.getMany();
   
     // Gắn URL ảnh avatar nếu có
-    const hostUrl = process.env.HOST_API_URL || 'http://localhost:3087';
-    for (const user of items) {
-      if (user.images) {
-        user.images = `${hostUrl}/api/${user.images}`;
-      }
-    }
+    // const hostUrl = process.env.HOST_API_URL || 'http://localhost:3087';
+    // for (const user of items) {
+    //   if (user.images) {
+    //     user.images = `${hostUrl}/api/${user.images}`;
+    //   }
+    // }
   
     return new PageDto(items, pageMetaDto);
   }
@@ -124,10 +124,10 @@ export class UsersService {
     }
   
     // Xử lý ảnh nếu có
-    if (user.images) {
-      const hostUrl = 'http://localhost:3087'; // Nên đưa vào biến môi trường
-      user.images = `${hostUrl}/api/${user.images}`;
-    }
+    // if (user.images) {
+    //   const hostUrl = 'http://localhost:3087'; // Nên đưa vào biến môi trường
+    //   user.images = `${hostUrl}/api/${user.images}`;
+    // }
   
     return user;
   }

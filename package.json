@@ -49,7 +49,8 @@
     "sharp": "^0.33.5",
     "slugify": "^1.6.6",
     "typeorm": "^0.3.20",
-    "unaccent": "^0.3.0"
+    "unaccent": "^0.3.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

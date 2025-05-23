@@ -8,7 +8,7 @@ export class Cart extends BaseWithCreatedBy {
 
     @OneToMany(() => CartDetail, (detail) => detail.cart, {
         cascade: true,
-        eager: true,
+        // eager: true,
     })
     details: CartDetail[];
 }

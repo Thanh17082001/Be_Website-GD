@@ -35,7 +35,7 @@ export class CreateProductDto extends OmitType(BaseDto,[] as const){
   @IsString()
   code: string;
 
-  @ApiProperty({ type: [String], required: false })
+  @ApiProperty({ type: [String], required: true })
   @IsOptional()
   // @IsArray()
   images?: string[];
@@ -53,7 +53,7 @@ export class CreateProductDto extends OmitType(BaseDto,[] as const){
   @ApiProperty({ type: [String], required: false })
   @IsOptional()
   @IsString({ each: true })
-  classes?: string[];
+  classes?: string[]
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -65,8 +65,8 @@ export class CreateProductDto extends OmitType(BaseDto,[] as const){
   @IsString()
   typeParent?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({type: [String], required: false })
   @IsOptional()
-  @IsString()
-  categories?: string;
+  @IsString({ each: true })
+  categories?: string[];
 }

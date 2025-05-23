@@ -35,18 +35,18 @@ export class SolutionsController {
   }
 
   @Patch(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   update(@Param('id') id: string, @Body() updateSolutionDto: UpdateSolutionDto) {
     return this.solutionsService.update(+id, updateSolutionDto);
   }
 
   @Delete(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   remove(@Param('id') id: string) {
     return this.solutionsService.remove(+id);
   }
   @Patch('restore/:id')
-  @Public()
+  @Roles(Role.ADMIN)
   restore(@Param('id') id: string) {
     return this.solutionsService.restore(+id);
   }

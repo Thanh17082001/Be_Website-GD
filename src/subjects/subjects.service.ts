@@ -71,25 +71,24 @@ export class SubjectsService {
   }
   async findAll(
     pageOptions: PageOptionsDto,
-    query: Partial<Subject>
+    rawQuery: Record<string, any>,
+    user: User
   ): Promise<PageDto<Subject>> {
     const queryBuilder = this.repo.createQueryBuilder('subject')
       .leftJoinAndSelect('subject.createdBy', 'createdBy')
       .leftJoinAndSelect('subject.products', 'product')
       .leftJoinAndSelect('subject.classes', 'class')
-      .leftJoinAndSelect('subject.grades', 'grades') // Join grade
+      .leftJoinAndSelect('subject.grades', 'grades');
 
     const { page, limit, skip, order, search } = pageOptions;
     const paginationParams = ['page', 'limit', 'skip', 'order', 'search'];
 
-    // Áp dụng filter theo query (ví dụ gradeId, name, ...)
-    if (query && Object.keys(query).length > 0) {
-      Object.keys(query).forEach((key) => {
-        if (!paginationParams.includes(key) && query[key] !== undefined) {
-          queryBuilder.andWhere(`subject.${key} = :${key}`, { [key]: query[key] });
-        }
-      });
-    }
+    // Filter theo query (loại bỏ các param phân trang)
+    Object.keys(rawQuery).forEach(key => {
+      if (!paginationParams.includes(key) && rawQuery[key] !== undefined) {
+        queryBuilder.andWhere(`subject.${key} = :${key}`, { [key]: rawQuery[key] });
+      }
+    });
 
     // Search theo tên môn học
     if (search) {
@@ -99,16 +98,16 @@ export class SubjectsService {
       );
     }
 
-    queryBuilder
-      .orderBy('subject.createdAt', order)
-      .skip(skip)
-      .take(limit);
+    // Nếu không truyền limit thì bỏ phân trang (get all)
+    const hasLimit = Object.prototype.hasOwnProperty.call(rawQuery, 'limit');
+    if (hasLimit) {
+      queryBuilder.skip(skip).take(limit);
+    }
 
     const itemCount = await queryBuilder.getCount();
-    const pageMetaDto = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
     const { entities } = await queryBuilder.getRawAndEntities();
 
-    return new PageDto(entities, pageMetaDto);
+    return new PageDto(entities, new PageMetaDto({ pageOptionsDto: pageOptions, itemCount }));
   }
   async findOne(id: number): Promise<Subject> {
     const subject = await this.repo.findOne({

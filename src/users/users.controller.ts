@@ -16,13 +16,14 @@ export class UsersController {
   constructor(private readonly userService: UsersService) { }
 
   @Post('admin')
+  @Public()
   async createAdmin() {
     const userDto: CreateUserDto = {
       fullName: `Quản Trị Viên `,
       username: 'admin',
       email: 'admin@gmail.com',
       role: 'Quản trị viên',
-      password: '1',
+      password: '11111111',
       isAdmin: true,
       images: 'public/user/image/default-avatar.png'
     };

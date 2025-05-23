@@ -24,37 +24,38 @@ export class ClassController {
   }
 
   @Get()
+  // @Roles(Role.ADMIN)
   @Public()
   async findAll(@Query() pageOptionDto: PageOptionsDto, @Query() query: Partial<Class>, @Req() request: Request) {
     const user = request['user'] ?? null;
     return this.classService.findAll(pageOptionDto, query, user);
   } 
   @Get('findbydeleted')
-  @Public()
+  @Roles(Role.ADMIN)
   async findByDeleted(@Query() pageOptionDto: PageOptionsDto, @Query() query: Partial<Class>, @Req() request: Request) {
     const user = request['user'] ?? null;
     return this.classService.findByDeleted(pageOptionDto, query, user);
   } 
 
   @Get(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   findOne(@Param('id') id: string) {
     return this.classService.findOne(+id);
   }
 
   @Patch(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   update(@Param('id') id: string, @Body() updateClassDto: UpdateClassDto) {
     return this.classService.update(+id, updateClassDto);
   }
 
   @Delete(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   remove(@Param('id') id: string) {
     return this.classService.remove(+id);
   }
   @Patch('restore/:id')
-  @Public()
+  @Roles(Role.ADMIN)
   restore(@Param('id') id: string) {
     return this.classService.restore(+id);
   }

@@ -1,5 +1,6 @@
 import { BaseWithCreatedBy } from "src/common/entities/base-user-createdBy";
 import {Contact} from "src/contacts/entities/contact.entity"
+import { Role } from "src/role/role.enum";
 import { Column, Entity, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 
 
@@ -16,11 +17,11 @@ export class User extends BaseWithCreatedBy {
     password: string;
     @Column()
     isAdmin: boolean;
-    @Column()
+    @Column({ default: 'khách hàng', enum:Role })
     role: string;
     @Column({ default: 'default-user.png' })
     images: string;
 
-    @OneToOne(() => Contact, (contact) => contact.user, { cascade: true })
-    address: Contact;
+    @OneToMany(() => Contact, (contact) => contact.user, { cascade: true })
+    contacts: Contact[];
 }

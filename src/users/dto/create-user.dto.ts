@@ -17,7 +17,7 @@ export class CreateUserDto {
     @ApiProperty()
     @IsOptional()
     isAdmin?: boolean = false;
-    @ApiProperty()
+    // @ApiProperty()
     @IsOptional()
     role: string = 'khách hàng';
     @ApiProperty({ type: 'string', format: 'binary', required: false })

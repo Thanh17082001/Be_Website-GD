@@ -16,9 +16,12 @@ export class ContactsService {
     @InjectRepository(User) private userrepo: Repository<User>,
   ) { }
   async create(createContactDto: CreateContactDto, user_cr: User) {
-    const { name, phone, address, user, messages } = createContactDto
+    const { name, phone, address, user, messages, email } = createContactDto
     // console.log(messages)
     // kiem tra dia chi cua user
+    if(!user) {
+      throw new HttpException('Không tìm thầy user ', 409)
+    }
     const checkName = await this.repo.findOne({
       where: { name },
     })
@@ -27,30 +30,30 @@ export class ContactsService {
     if (!checkUser) {
       throw new HttpException(`Không tìm thầy user với ID: ${user}`, 409)
     }
-    const isUserLinked = await this.repo.findOne({ where: { user: { id: Number(user) } } });
-    if (isUserLinked) {
-      throw new HttpException('User này đã có liên hệ (contact) rồi', 409);
-    }
-    if (checkName) {
-      throw new HttpException('Tên liên hệ đã tồn tại', 409)
-    }
-    // Kiểm tra số điện thoại đã tồn tại
-    const checkPhone = await this.repo.findOne({ where: { phone } });
-    if (checkPhone) {
-      throw new HttpException('Số điện thoại đã tồn tại', 409);
-    }
+    // const isUserLinked = await this.repo.findOne({ where: { user: { id: Number(user) } } });
+    // if (isUserLinked) {
+    //   throw new HttpException('User này đã có liên hệ (contact) rồi', 409);
+    // }
+    // if (checkName) {
+    //   throw new HttpException('Tên liên hệ đã tồn tại', 409)
+    // }
+    // // Kiểm tra số điện thoại đã tồn tại
+    // const checkPhone = await this.repo.findOne({ where: { phone } });
+    // if (checkPhone) {
+    //   throw new HttpException('Số điện thoại đã tồn tại', 409);
+    // }
     const newContact = {
       name,
       phone,
       address,
       messages,
+      email,
       user: { ...checkUser },
       createdBy: user_cr?.isAdmin ? user_cr : null,
     }
     // console.log(newContact)
     return await this.repo.save(newContact)
   }
-
   async findAll(
     pageOptions: PageOptionsDto,
     query: Partial<Contact>
@@ -90,8 +93,6 @@ export class ContactsService {
 
     return new PageDto(entities, pageMetaDto);
   }
-
-
   async findOne(contactId: number): Promise<Contact> {
     const contact = await this.repo.findOne({
       where: { id: contactId },
@@ -104,9 +105,6 @@ export class ContactsService {
 
     return contact;
   }
-
-
-
   async update(id: number, updateContactDto: UpdateContactDto, user: User): Promise<Contact> {
     // 1️⃣ Tìm contact theo id
     const contact = await this.repo.findOne({
@@ -138,8 +136,6 @@ export class ContactsService {
     // 6️⃣ Lưu lại contact đã được cập nhật
     return await this.repo.save(contact);
   }
-
-
   async remove(id: number, user: User): Promise<Contact> {
     const contact = await this.repo.findOne({
       where: { id },

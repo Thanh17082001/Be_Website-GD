@@ -32,6 +32,7 @@ export class PostController {
 
   @Get()
   @Public()
+  // @Roles(Role.ADMIN, Role.CUSTOMER)
   async findAll(@Query() pageOptionDto: PageOptionsDto, @Req() request: Request) {
     const user = request['user'] ?? null;
     return this.postService.findAll(pageOptionDto, user);
@@ -44,7 +45,7 @@ export class PostController {
   }
 
   @Patch(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('images', { storage: storage('post', true), ...multerOptions }))
   update(
@@ -65,12 +66,11 @@ export class PostController {
   }
 
   @Delete(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   remove(@Param('id') id: string) {
     return this.postService.remove(+id);
   }
   @Patch('restore/:id')
-  @Public()
   @Roles(Role.ADMIN)
   async restore(@Param('id') id: string) {
     return this.postService.restore(+id);

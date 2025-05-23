@@ -19,6 +19,10 @@ export class CreateContactDto extends OmitType(BaseDto, [] as const) {
     @IsString()
     messages: string
 
+    @ApiProperty()
+    @IsString()
+    email: string
+
     @ApiProperty({ required: false })
     @IsString()
     @IsOptional()

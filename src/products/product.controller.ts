@@ -9,12 +9,14 @@ import { User } from 'src/users/entities/user.entity';
 import { Role } from 'src/role/role.enum';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { multerOptions, storage } from 'src/config/multer';
-import { ApiConsumes } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { Public } from 'src/common/decorators/customize.decorator';
 import { PageOptionsDto } from 'src/common/pagination/page-option-dto';
+import { ImportFileExcelUser } from './dto/import-excel.dto';
+import { RoleGuard } from 'src/role/role.guard';
 
 @Controller('products')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RoleGuard)
 export class ProductController {
   constructor(private readonly productService: ProductService) { }
 
@@ -34,6 +36,7 @@ export class ProductController {
     @UploadedFiles() files: Express.Multer.File[],
 
   ) {
+    // console.log(files)
     const user: User = request['user'];
     // Parse chuỗi thành mảng
     ['subjects', 'classes', 'categories', 'grades'].forEach((field) => {
@@ -51,6 +54,30 @@ export class ProductController {
     return await this.productService.create(createProductDto, user);
   }
 
+  @Post('import-excel')
+  // @Public()
+  @Roles(Role.ADMIN)
+  @UseInterceptors(FileInterceptor('products'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async importExcel(@UploadedFile() file: Express.Multer.File, @Req() request: Request) {
+    // ✅ Gọi hàm xử lý bên service
+    const user = request['user'] ?? null;
+    // console.log(file)
+    // console.log(user)
+    return this.productService.importFromExcel(file, user);
+  }
+
   @Get()
   @Public()
   async findAll(@Query() pageOptionsDto: PageOptionsDto, @Req() request: Request) {
@@ -59,8 +86,11 @@ export class ProductController {
   }
   @Get('filterproducts')
   @Public()
-  async filterProducts(@Query() query: any) {
-    return this.productService.filterProducts(query);
+  async filterProducts(
+    @Query() query: any,
+    @Query() pageOptionsDto: PageOptionsDto
+  ) {
+    return this.productService.filterProducts(pageOptionsDto, query);
   }
   @Get(':id')
   @Public()
@@ -69,59 +99,69 @@ export class ProductController {
   }
 
   @Patch(':id')
+  @Roles(Role.ADMIN)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FilesInterceptor('images', 10, {
       storage: storage('product', true),
       ...multerOptions,
-    })
+    }),
   )
-  @Public()
   async update(
     @Param('id') id: string,
-    @UploadedFiles() files: Express.Multer.File[], // optional nếu có file
-    @Body() updateProductDto: UpdateProductDto
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() updateProductDto: any
   ) {
-    // Tìm sản phẩm cũ từ DB để lấy images hiện tại
     const existingProduct = await this.productService.findOne(+id);
     if (!existingProduct) {
       throw new Error('Product not found');
     }
 
-    // Nếu có file, cập nhật trường images
-    if (files && files.length > 0) {
-      updateProductDto.images = files.map(file => `public/product/image/${file.filename}`);
-    } else {
-      // Nếu không có file, giữ lại images cũ
-      updateProductDto.images = existingProduct.images;
-    }
+    // Parse fields nếu là JSON string
     const fieldsToParse = ['subjects', 'classes', 'categories', 'grades'];
-
     fieldsToParse.forEach(field => {
-      const value = updateProductDto[field];
-      if (value !== undefined) {
-        if (typeof value === 'string') {
-          try {
-            updateProductDto[field] = JSON.parse(value);
-          } catch {
-            updateProductDto[field] = [parseInt(value)];
-          }
-        } else if (!Array.isArray(value)) {
-          updateProductDto[field] = [parseInt(value)];
+      if (typeof updateProductDto[field] === 'string') {
+        try {
+          updateProductDto[field] = JSON.parse(updateProductDto[field]);
+        } catch {
+          updateProductDto[field] = [parseInt(updateProductDto[field])];
         }
+      } else if (!Array.isArray(updateProductDto[field]) && updateProductDto[field] !== undefined) {
+        updateProductDto[field] = [parseInt(updateProductDto[field])];
       }
     });
-    // Tiến hành gọi service để cập nhật sản phẩm
+
+    // Parse lại images giữ lại từ client (nếu có)
+    let oldImages: string[] = [];
+    if (typeof updateProductDto.images === 'string') {
+      try {
+        oldImages = JSON.parse(updateProductDto.images);
+      } catch {
+        oldImages = [updateProductDto.images];
+      }
+    } else if (Array.isArray(updateProductDto.images)) {
+      oldImages = updateProductDto.images;
+    }
+
+    // Nếu có ảnh mới => thêm vào cuối danh sách
+    const newUploadedImages = (files || []).map(file => `public/product/image/${file.filename}`);
+
+    // Merge ảnh cũ (người dùng giữ lại) + ảnh mới
+    updateProductDto.images = [...oldImages, ...newUploadedImages];
+
+    // Gọi service
     return this.productService.update(+id, updateProductDto);
   }
 
+
+
   @Delete(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   remove(@Param('id') id: string) {
     return this.productService.remove(+id);
   }
   @Patch('restore/:id')
-  @Public()
+  @Roles(Role.ADMIN)
   restore(@Param('id') id: string) {
     return this.productService.restore(+id);
   }

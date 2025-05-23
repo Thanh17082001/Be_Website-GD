@@ -83,12 +83,12 @@ export class GradeService {
       });
   
       // Map ảnh cho mỗi product
-      const hostUrl = process.env.HOST_API_URL || 'http://192.168.1.16:3087';
-      fullGrade?.products?.forEach((product) => {
-        if (Array.isArray(product.images)) {
-          product.images = product.images.map((imgPath) => `${hostUrl}/api/${imgPath}`);
-        }
-      });
+      // const hostUrl = process.env.HOST_API_URL || 'http://192.168.1.16:3087';
+      // fullGrade?.products?.forEach((product) => {
+      //   if (Array.isArray(product.images)) {
+      //     product.images = product.images.map((imgPath) => `${hostUrl}/api/${imgPath}`);
+      //   }
+      // });
   
       return fullGrade!;
     }));
@@ -157,7 +157,7 @@ export class GradeService {
 
     await this.repo.update(id, example)
 
-    return new ItemDto(example);;
+    return new ItemDto(example);
   }
   async filterByTypeParentAndGrade(
     pageOptions: PageOptionsDto,
@@ -216,7 +216,7 @@ export class GradeService {
         ],
       });
   
-      const hostUrl = process.env.HOST_API_URL || 'http://localhost:3087';
+      // const hostUrl = '';
   
       if (fullGrade?.products) {
         fullGrade.products = fullGrade.products.filter(product =>
@@ -225,7 +225,7 @@ export class GradeService {
   
         fullGrade.products.forEach((product) => {
           if (Array.isArray(product.images)) {
-            product.images = product.images.map(img => `${hostUrl}/api/${img}`);
+            product.images = product.images.map(img => `api/${img}`);
           }
         });
       }
@@ -239,7 +239,6 @@ export class GradeService {
   
     return new PageDto(fullItems, pageMetaDto);
   }
-  
   async remove(id: number): Promise<Grade> {
     const grade = await this.repo.findOne({
       where: { id },

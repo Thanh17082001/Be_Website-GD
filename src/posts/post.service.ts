@@ -27,6 +27,7 @@ export class PostService {
     return post
   }
   async findAll(pageOptions: PageOptionsDto, query: Partial<User>): Promise<PageDto<Post>> {
+    console.log(query)
     const queryBuilder = this.repo.createQueryBuilder('post').leftJoinAndSelect('post.createdBy', 'createdBy');
     const { page, limit, skip, order, search } = pageOptions;
     const pagination: string[] = ['page', 'limit', 'skip', 'order', 'search']
@@ -56,12 +57,12 @@ export class PostService {
     const { entities } = await queryBuilder.getRawAndEntities();
 
     // 💡 Map lại image path thành full URL
-    const mappedEntities = entities.map((post) => {
-      if (post.images && !post.images.startsWith('http')) {
-        post.images = `${process.env.HOST_API_URL || 'http://192.168.1.45:3087/api'}/${post.images}`;
-      }
-      return post;
-    });
+    // const mappedEntities = entities.map((post) => {
+    //   if (post.images && !post.images.startsWith('http')) {
+    //     post.images = `${process.env.HOST_API_URL || 'http://192.168.1.45:3087/api'}/${post.images}`;
+    //   }
+    //   return post;
+    // });
     return new PageDto(entities, pageMetaDto);
   }
   async findOne(id: number): Promise<Post> {
@@ -74,10 +75,10 @@ export class PostService {
       throw new NotFoundException(`Không tìm thấy bài viết với ID: ${id}`);
     }
 
-    if (post.images) {
-      const hostUrl = 'http://192.168.1.45:3087'; // Có thể dùng biến ENV nếu cần
-      post.images = `${hostUrl}/api/${post.images}`;
-    }
+    // if (post.images) {
+    //   const hostUrl = 'http://192.168.1.45:3087'; // Có thể dùng biến ENV nếu cần
+    //   post.images = `${hostUrl}/api/${post.images}`;
+    // }
 
     return post;
   }

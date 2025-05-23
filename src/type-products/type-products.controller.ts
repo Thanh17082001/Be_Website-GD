@@ -60,4 +60,9 @@ export class TypeProductsController {
   remove(@Param('id') id: string) {
     return this.typeProductsService.remove(+id);
   }
+  @Patch('restore/:id')
+  @Public()
+  restore(@Param('id') id: string) {
+    return this.typeProductsService.restore(+id);
+  }
 }

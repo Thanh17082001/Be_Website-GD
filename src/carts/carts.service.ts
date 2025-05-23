@@ -66,25 +66,97 @@ export class CartsService {
   findAll() {
     return `This action returns all carts`;
   }
-
   async findOne(id: number) {
     const cart = await this.repo.findOne({
-      where: { createdBy: {id} },  // Tìm theo userId (hoặc thay đổi điều kiện khác)
-      relations: ['details', 'details.product'],  // Nếu muốn lấy details và product trong Cart
+      where: { createdBy: { id } },
+      relations: ['details', 'details.product'],  // Bao gồm details và product
     });
 
     if (!cart) {
       throw new NotFoundException(`Cart for user with ID ${id} not found`);
     }
-
     return cart;
   }
+  async decreaseProductQuantity(updateCartDto: UpdateCartDto, user: User) {
+    const { productId } = updateCartDto;
+    // console.log(productId)
+    // console.log(user)
+    const cart = await this.repo.findOne({
+      where: { createdBy: { id: user.id } },
+      relations: ['details', 'details.product'],
+    });
 
-  update(id: number, updateCartDto: UpdateCartDto) {
-    return `This action updates a #${id} cart`;
+    if (!cart) {
+      throw new NotFoundException('Cart not found');
+    }
+
+    const cartDetail = cart.details.find(detail => detail.product.id === productId);
+
+    if (!cartDetail) {
+      throw new NotFoundException(`Product with ID ${productId} not found in cart`);
+    }
+
+    if (cartDetail.quantity > 1) {
+      cartDetail.quantity -= 1;
+      await this.cartDetailRepo.save(cartDetail);
+    }
+
+    return this.repo.findOne({
+      where: { id: cart.id },
+      relations: ['details', 'details.product'],
+    });
   }
+  async increaseProductQuantity(updateCartDto: UpdateCartDto, user: User) {
+    const { productId } = updateCartDto;
 
-  remove(id: number) {
-    return `This action removes a #${id} cart`;
+    const cart = await this.repo.findOne({
+      where: { createdBy: { id: user.id } },
+      relations: ['details', 'details.product'],
+    });
+
+    if (!cart) {
+      throw new NotFoundException('Cart not found');
+    }
+
+    const cartDetail = cart.details.find(detail => detail.product.id === productId);
+
+    if (!cartDetail) {
+      throw new NotFoundException(`Product with ID ${productId} not found in cart`);
+    }
+
+    // Tăng số lượng
+    cartDetail.quantity += 1;
+    await this.cartDetailRepo.save(cartDetail);
+
+    return this.repo.findOne({
+      where: { id: cart.id },
+      relations: ['details', 'details.product'],
+    });
+  }
+  async removeProductFromCart(updateCartDto: UpdateCartDto, user: User) {
+    const { productId } = updateCartDto;
+
+    const cart = await this.repo.findOne({
+      where: { createdBy: { id: user.id } },
+      relations: ['details', 'details.product'],
+    });
+
+    if (!cart) {
+      throw new NotFoundException('Cart not found');
+    }
+
+    const cartDetail = cart.details.find(detail => detail.product.id === productId);
+
+    if (!cartDetail) {
+      throw new NotFoundException(`Product with ID ${productId} not found in cart`);
+    }
+
+    // Xóa cartDetail
+    await this.cartDetailRepo.remove(cartDetail);
+
+    return this.repo.findOne({
+      where: { id: cart.id },
+      relations: ['details', 'details.product'],
+    });
   }
 }

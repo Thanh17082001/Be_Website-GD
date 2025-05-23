@@ -16,8 +16,8 @@ export class GradeController {
   constructor(private readonly gradeService: GradeService) { }
 
   @Post()
-  // @Roles(Role.ADMIN)
-  @Public()
+  @Roles(Role.ADMIN)
+  // @Public()
   async create(@Body() createGradeDto: CreateGradeDto, @Req() request: Request) {
     // let createGradeDto: CreateGradeDto = new CreateGradeDto();
     const user: User = request['user'] ?? null;
@@ -50,23 +50,23 @@ export class GradeController {
   }
   
   @Get(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   findOne(@Param('id') id: string) {
     return this.gradeService.findOne(+id);
   }
 
   @Patch(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   update(@Param('id') id: string, @Body() updateGradeDto: UpdateGradeDto) {
     return this.gradeService.update(+id, updateGradeDto);
   }
   @Delete(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   remove(@Param('id') id: string) {
     return this.gradeService.remove(+id);
   }
   @Patch('restore/:id')
-  @Public()
+  @Roles(Role.ADMIN)
   restore(@Param('id') id: string) {
     return this.gradeService.restore(+id);
   }

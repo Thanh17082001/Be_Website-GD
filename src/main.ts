@@ -30,7 +30,7 @@ async function bootstrap() {
   app.use(express.urlencoded({ limit: '1024mb', extended: true }));
 
   // set global route
-  app.setGlobalPrefix('api'); 
+  app.setGlobalPrefix('api');
 
   //html exceptions
   app.useGlobalFilters(new HttpExceptionFilter());
@@ -51,19 +51,22 @@ async function bootstrap() {
   });
 
   //middleware
-    //custom transform
+  //custom transform
   const reflector = app.get(Reflector);
   app.useGlobalInterceptors(new TransformInterceptor(reflector));
 
-    //custom logging
+  //custom logging
   app.useGlobalInterceptors(new LoggingInterceptor());
 
-    //validation
+  //validation
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
       whitelist: true,
-      disableErrorMessages: false
+      disableErrorMessages: false,
+      // transformOptions: {
+      //   enableImplicitConversion: true,
+      // },
     }),
   );
 
@@ -75,8 +78,8 @@ async function bootstrap() {
     optionsSuccessStatus: 204,
   });
 
- 
-    //config server
+
+  //config server
   const PORT = configService.get<number>('PORT') || 3000;
   await app.listen(PORT, () => {
     console.log(`Server is  running at http://localhost:${PORT}/api`);

@@ -170,29 +170,29 @@ export class TypeParentsService {
     return this.repo.save(merged);
   }
   async remove(id: number): Promise<TypeParent> {
-      const typeParent = await this.repo.findOne({
-        where: { id },
-        relations: ['createdBy'],
-      });
-  
-      if (!typeParent) {
-        throw new NotFoundException('TypeParent không tồn tại');
-      }
-  
-      await this.repo.softDelete({ id });
-      return typeParent;
+    const typeParent = await this.repo.findOne({
+      where: { id },
+      relations: ['createdBy'],
+    });
+
+    if (!typeParent) {
+      throw new NotFoundException('TypeParent không tồn tại');
     }
-    async restore(id: number): Promise<TypeParent> {
-      const typeParent = await this.repo.findOne({
-        where: { id },
-        withDeleted: true,
-      });
-  
-      if (!typeParent) {
-        throw new NotFoundException('TypeParent không tồn tại hoặc đã bị xoá');
-      }
-  
-      await this.repo.restore(id);
-      return this.repo.findOne({ where: { id } });
+
+    await this.repo.softDelete({ id });
+    return typeParent;
+  }
+  async restore(id: number): Promise<TypeParent> {
+    const typeParent = await this.repo.findOne({
+      where: { id },
+      withDeleted: true,
+    });
+
+    if (!typeParent) {
+      throw new NotFoundException('TypeParent không tồn tại hoặc đã bị xoá');
     }
+
+    await this.repo.restore(id);
+    return this.repo.findOne({ where: { id } });
+  }
 }

@@ -25,6 +25,9 @@ import { MailProducerModule } from './mail-producer/mail-producer.module';
 import { MailConsumerController } from './mail-consumer/mail-consumer.controller';
 import { CartsModule } from './carts/carts.module';
 import { CartDetailModule } from './cart-detail/cart-detail.module';
+import { PricequotesModule } from './pricequotes/pricequotes.module';
+import { StatusModule } from './status/status.module';
+import { PricequoteDetailsModule } from './pricequote-details/pricequote-details.module';
 
 @Module({
   imports: [
@@ -58,13 +61,13 @@ import { CartDetailModule } from './cart-detail/cart-detail.module';
             synchronize: true,
             autoLoadEntities: true,
           };
-          console.log(dbConfig, 'tttttt');
+          console.log(connection, 'tttttt');
           return connection;
         } catch (error) {
           console.log(error);
         }
       },
-    }), ExamplesModule, UsersModule, AuthModule, RoleModule, PostModule, GradeModule, SubjectsModule, ClassModule, ProductModule, TypeProductsModule, CategoriesModule, ContactsModule, TypeParentsModule, SolutionsModule, MailProducerModule, CartsModule, CartDetailModule
+    }), ExamplesModule, UsersModule, AuthModule, RoleModule, PostModule, GradeModule, SubjectsModule, ClassModule, ProductModule, TypeProductsModule, CategoriesModule, ContactsModule, TypeParentsModule, SolutionsModule, MailProducerModule, CartsModule, CartDetailModule, PricequotesModule, StatusModule, PricequoteDetailsModule
   ],
   controllers: [MailConsumerController],
   providers: [

@@ -23,13 +23,14 @@ export class SubjectsController {
   }
 
   @Get()
-  @Public()
+  @Roles(Role.ADMIN)
   async findAll(
     @Query() pageOptionsDto: PageOptionsDto,
+    @Query() query: Partial<Subject>,
     @Req() request: Request
   ) {
     const user = request['user'] ?? null;
-    return this.subjectsService.findAll(pageOptionsDto, user); // Không cần truyền user nếu không dùng
+    return this.subjectsService.findAll(pageOptionsDto, query, user);
   }
 
   @Get(':id')
@@ -39,18 +40,18 @@ export class SubjectsController {
   }
 
   @Patch(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   update(@Param('id') id: string, @Body() updateSubjectDto: UpdateSubjectDto) {
     return this.subjectsService.update(+id, updateSubjectDto);
   }
 
   @Delete(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   remove(@Param('id') id: string) {
     return this.subjectsService.remove(+id);
   }
   @Patch('restore/:id')
-  @Public()
+  @Roles(Role.ADMIN)
   restore(@Param('id') id: string) {
     return this.subjectsService.restore(+id);
   }

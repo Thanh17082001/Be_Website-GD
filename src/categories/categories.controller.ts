@@ -23,7 +23,8 @@ export class CategoriesController {
   }
 
   @Get()
-  @Public()
+  // @Public()
+  @Roles(Role.ADMIN)
   async findAll(
     @Query() pageOptionsDto: PageOptionsDto,
     @Req() request: Request
@@ -32,7 +33,7 @@ export class CategoriesController {
     return this.categoriesService.findAll(pageOptionsDto, user);
   }
   @Get('findbydeleted')
-  @Public()
+  @Roles(Role.ADMIN)
   async findByDeleted(
     @Query() pageOptionsDto: PageOptionsDto,
     @Req() request: Request
@@ -41,24 +42,24 @@ export class CategoriesController {
     return this.categoriesService.findByDeleted(pageOptionsDto, user);
   }
   @Get(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   findOne(@Param('id') id: string) {
     return this.categoriesService.findOne(+id);
   }
 
   @Patch(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   update(@Param('id') id: string, @Body() updateCategoryDto: UpdateCategoryDto) {
     return this.categoriesService.update(+id, updateCategoryDto);
   }
 
   @Delete(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   remove(@Param('id') id: string) {
     return this.categoriesService.remove(+id);
   }
   @Patch('restore/:id')
-  @Public()
+  @Roles(Role.ADMIN)
   restore(@Param('id') id: string) {
     return this.categoriesService.restore(+id);
   }

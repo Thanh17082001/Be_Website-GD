@@ -57,13 +57,13 @@ export class CategoriesService {
     const paginationParams = ['page', 'limit', 'skip', 'order', 'search'];
 
     // Áp dụng filter theo query (ví dụ name, createdBy,...)
-    if (query && Object.keys(query).length > 0) {
-      Object.keys(query).forEach((key) => {
-        if (!paginationParams.includes(key) && query[key] !== undefined) {
-          queryBuilder.andWhere(`category.${key} = :${key}`, { [key]: query[key] });
-        }
-      });
-    }
+    // if (query && Object.keys(query).length > 0) {
+    //   Object.keys(query).forEach((key) => {
+    //     if (!paginationParams.includes(key) && query[key] !== undefined) {
+    //       queryBuilder.andWhere(`category.${key} = :${key}`, { [key]: query[key] });
+    //     }
+    //   });
+    // }
 
     // Search theo tên danh mục
     if (search) {
@@ -179,13 +179,13 @@ export class CategoriesService {
     const paginationParams = ['page', 'limit', 'skip', 'order', 'search'];
   
     // Lọc theo các trường khác
-    if (query && Object.keys(query).length > 0) {
-      Object.keys(query).forEach((key) => {
-        if (!paginationParams.includes(key) && query[key] !== undefined) {
-          queryBuilder.andWhere(`category.${key} = :${key}`, { [key]: query[key] });
-        }
-      });
-    }
+    // if (query && Object.keys(query).length > 0) {
+    //   Object.keys(query).forEach((key) => {
+    //     if (!paginationParams.includes(key) && query[key] !== undefined) {
+    //       queryBuilder.andWhere(`category.${key} = :${key}`, { [key]: query[key] });
+    //     }
+    //   });
+    // }
   
     // Tìm kiếm theo tên
     if (search) {

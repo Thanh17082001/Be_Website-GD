@@ -28,7 +28,7 @@ export class ContactsController {
     @Req() request: Request
   ) {
     const user = request['user'] ?? null;
-    return this.contactsService.findAll(pageOptionsDto, user); // Không cần truyền user nếu không dùng
+    return this.contactsService.findAll(pageOptionsDto, user);
   }
 
   @Get(':id')
@@ -38,20 +38,20 @@ export class ContactsController {
   }
 
   @Patch(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   update(@Param('id') id: string, @Body() updateContactDto: UpdateContactDto, @Req() request: Request) {
     const user: User = request['user']
     return this.contactsService.update(+id, updateContactDto, user);
   }
 
   @Delete(':id')
-  @Public()
+  @Roles(Role.ADMIN)
   remove(@Param('id') id: string, @Req() request: Request) {
     const user: User = request['user'];
     return this.contactsService.remove(+id, user);
   }
   @Patch('restore/:id')
-  @Public()
+  @Roles(Role.ADMIN)
   restore(@Param('id') id: string, @Req() request: Request) {
     const user: User = request['user'];
     return this.contactsService.restore(+id, user);
