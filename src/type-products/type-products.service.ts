@@ -273,7 +273,6 @@ export class TypeProductsService {
 
     return this.repo.save(merged);
   }
-
   async uploadImage(image: Express.Multer.File): Promise<string> {
     const filePath = `public/type-product/image/${image.filename}`; // Định dạng đường dẫn lưu ảnh
     // Giả sử bạn lưu ảnh vào thư mục public hoặc thư mục nào đó trên server
@@ -330,5 +329,17 @@ export class TypeProductsService {
 
     return gradeIds;
   }
+  async findByTypeParent(typeParentId: string): Promise<TypeProduct[]> {
+    const typeProducts = await this.repo.find({
+      where: {
+        typeParent: { id: Number(typeParentId) }, 
+      },
+      relations: ['products', 'createdBy', 'grades', 'typeParent'],
+      order: {
+        createdAt: 'DESC',
+      },
+    });
 
+    return typeProducts;
+  }
 }

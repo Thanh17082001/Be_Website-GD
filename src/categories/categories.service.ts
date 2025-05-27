@@ -174,10 +174,10 @@ export class CategoriesService {
       .leftJoinAndSelect('category.products', 'products')
       .leftJoinAndSelect('category.grades', 'grades')
       .where('category.deletedAt IS NOT NULL'); // <- Lọc chỉ các bản ghi đã bị soft-delete
-  
+
     const { page, limit, skip, order, search } = pageOptions;
     const paginationParams = ['page', 'limit', 'skip', 'order', 'search'];
-  
+
     // Lọc theo các trường khác
     // if (query && Object.keys(query).length > 0) {
     //   Object.keys(query).forEach((key) => {
@@ -186,7 +186,7 @@ export class CategoriesService {
     //     }
     //   });
     // }
-  
+
     // Tìm kiếm theo tên
     if (search) {
       queryBuilder.andWhere(
@@ -194,18 +194,27 @@ export class CategoriesService {
         { search: `%${search}%` }
       );
     }
-  
+
     queryBuilder
       .orderBy('category.createdAt', order)
       .skip(skip)
       .take(limit);
-  
+
     const itemCount = await queryBuilder.getCount();
     const pageMetaDto = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
     const { entities } = await queryBuilder.getRawAndEntities();
-  
+
     return new PageDto(entities, pageMetaDto);
   }
-  
+  async findByGrades(
+    gradeIds: number[],
+  ): Promise<Category[]> {
+    const queryBuilder = this.repo.createQueryBuilder('category')
+      .leftJoinAndSelect('category.products', 'products')
+      .leftJoinAndSelect('category.grades', 'grades')
+      .where('grades.id IN (:...gradeIds)', { gradeIds })
+      .orderBy('category.id', 'ASC'); // Sắp xếp theo id tăng dần
 
+    return queryBuilder.getMany();
+  }
 }

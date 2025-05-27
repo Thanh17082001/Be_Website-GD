@@ -16,7 +16,7 @@ import { User } from 'src/users/entities/user.entity';
 @Controller('type-products')
 @UseGuards(AuthGuard)
 export class TypeProductsController {
-  constructor(private readonly typeProductsService: TypeProductsService) {}
+  constructor(private readonly typeProductsService: TypeProductsService) { }
 
   @Post()
   @Roles(Role.ADMIN)
@@ -26,7 +26,7 @@ export class TypeProductsController {
     // console.log(images)
     const user: User = request['user'] ?? null;
     const filePath = `public/type-product/image/${images?.filename}`;
-    return this.typeProductsService.create({...createTypeProductDto, images: filePath}, user);
+    return this.typeProductsService.create({ ...createTypeProductDto, images: filePath }, user);
   }
 
   @Get()
@@ -36,6 +36,12 @@ export class TypeProductsController {
     @Query() query: Partial<TypeProduct>,
   ) {
     return this.typeProductsService.findAll(pageOptionDto, query);
+  }
+
+  @Get('bytypeparent/:typeParentId')
+  @Public()
+  async getByTypeParent(@Param('typeParentId') typeParentId: string) {
+    return this.typeProductsService.findByTypeParent(typeParentId);
   }
 
   @Get(':id')

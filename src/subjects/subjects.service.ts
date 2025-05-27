@@ -213,5 +213,40 @@ export class SubjectsService {
     await this.repo.restore(id);
     return this.repo.findOne({ where: { id } });
   }
+  async findByClassesAndGrades(
+    classIds: number[],
+    gradeIds: number[],
+  ): Promise<Subject[]> {
+    const classQuery = this.repo.createQueryBuilder('subject')
+      .leftJoin('subject.classes', 'class')
+      .where('class.id IN (:...classIds)', { classIds })
+      .groupBy('subject.id')
+      .having('COUNT(DISTINCT class.id) = :classCount', { classCount: classIds.length });
 
+    const gradeQuery = this.repo.createQueryBuilder('subject')
+      .leftJoin('subject.grades', 'grade')
+      .where('grade.id IN (:...gradeIds)', { gradeIds })
+      .groupBy('subject.id')
+      .having('COUNT(DISTINCT grade.id) = :gradeCount', { gradeCount: gradeIds.length });
+
+    const classSubjects = await classQuery.select('subject.id').getRawMany();
+    const gradeSubjects = await gradeQuery.select('subject.id').getRawMany();
+
+    const classSubjectIds = classSubjects.map(s => s.subject_id);
+    const gradeSubjectIds = gradeSubjects.map(s => s.subject_id);
+
+    const intersectionIds = classSubjectIds.filter(id => gradeSubjectIds.includes(id));
+
+    if (intersectionIds.length === 0) return [];
+
+    // Lấy đầy đủ quan hệ
+    return this.repo.createQueryBuilder('subject')
+      .leftJoinAndSelect('subject.classes', 'class')
+      .leftJoinAndSelect('subject.grades', 'grade')
+      .leftJoinAndSelect('subject.products', 'product')
+      .leftJoinAndSelect('subject.createdBy', 'createdBy')
+      .whereInIds(intersectionIds)
+      .orderBy('subject.id', 'ASC')
+      .getMany();
+  }
 }

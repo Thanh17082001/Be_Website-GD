@@ -23,8 +23,8 @@ export class CategoriesController {
   }
 
   @Get()
-  // @Public()
-  @Roles(Role.ADMIN)
+  @Public()
+  // @Roles(Role.ADMIN)
   async findAll(
     @Query() pageOptionsDto: PageOptionsDto,
     @Req() request: Request
@@ -41,6 +41,14 @@ export class CategoriesController {
     const user = request['user'] ?? null;
     return this.categoriesService.findByDeleted(pageOptionsDto, user);
   }
+  @Post('by-grades')
+  @Public()
+  async getByGrades(
+    @Body('gradeIds') gradeIds: number[],
+  ) {
+    return this.categoriesService.findByGrades(gradeIds);
+  }
+
   @Get(':id')
   @Roles(Role.ADMIN)
   findOne(@Param('id') id: string) {
@@ -64,4 +72,3 @@ export class CategoriesController {
     return this.categoriesService.restore(+id);
   }
 }
- 

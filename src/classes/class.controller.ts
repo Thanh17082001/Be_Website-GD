@@ -13,7 +13,7 @@ import { Class } from './entities/class.entity';
 @Controller('classes')
 @UseGuards(RoleGuard)
 export class ClassController {
-  constructor(private readonly classService: ClassService) {}
+  constructor(private readonly classService: ClassService) { }
 
   @Post()
   @Roles(Role.ADMIN)
@@ -29,14 +29,21 @@ export class ClassController {
   async findAll(@Query() pageOptionDto: PageOptionsDto, @Query() query: Partial<Class>, @Req() request: Request) {
     const user = request['user'] ?? null;
     return this.classService.findAll(pageOptionDto, query, user);
-  } 
+  }
   @Get('findbydeleted')
   @Roles(Role.ADMIN)
   async findByDeleted(@Query() pageOptionDto: PageOptionsDto, @Query() query: Partial<Class>, @Req() request: Request) {
     const user = request['user'] ?? null;
     return this.classService.findByDeleted(pageOptionDto, query, user);
-  } 
-
+  }
+  @Post('by-grades')
+  @Public()
+  async getByGradeIds(
+    @Body() body: { gradeIds: number[] },
+    @Query() rawQuery: Record<string, any>
+  ) {
+    return this.classService.findByGradeIds(body.gradeIds, rawQuery);
+  }
   @Get(':id')
   @Roles(Role.ADMIN)
   findOne(@Param('id') id: string) {

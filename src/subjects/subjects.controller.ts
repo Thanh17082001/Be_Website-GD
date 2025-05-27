@@ -23,7 +23,8 @@ export class SubjectsController {
   }
 
   @Get()
-  @Roles(Role.ADMIN)
+  // @Roles(Role.ADMIN)
+  @Public()
   async findAll(
     @Query() pageOptionsDto: PageOptionsDto,
     @Query() query: Partial<Subject>,
@@ -32,7 +33,14 @@ export class SubjectsController {
     const user = request['user'] ?? null;
     return this.subjectsService.findAll(pageOptionsDto, query, user);
   }
-
+  @Post('by-classes-and-grades')
+  @Public()
+  async getByClassesAndGrades(
+    @Body('classIds') classIds: number[],
+    @Body('gradeIds') gradeIds: number[],
+  ): Promise<Subject[]> {
+    return this.subjectsService.findByClassesAndGrades(classIds, gradeIds);
+  }
   @Get(':id')
   @Public()
   findOne(@Param('id') id: string) {

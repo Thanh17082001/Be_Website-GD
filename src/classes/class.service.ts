@@ -192,4 +192,17 @@ export class ClassService {
     return new PageDto(entities, new PageMetaDto({ pageOptionsDto: pageOptions, itemCount }));
 
   }
+  async findByGradeIds(gradeIds: number[], rawQuery: Record<string, any>): Promise<Class[]> {
+    const queryBuilder = this.repo
+      .createQueryBuilder('class')
+      .leftJoinAndSelect('class.grade', 'grade')
+      .leftJoinAndSelect('class.createdBy', 'createdBy')
+      .leftJoinAndSelect('class.products', 'products')
+      .leftJoinAndSelect('class.subjects', 'subjects')
+      .where('grade.id IN (:...gradeIds)', { gradeIds })
+      .orderBy('class.id', 'ASC'); // Sắp xếp theo class.id tăng dần
+
+    return queryBuilder.getMany();
+  }
+
 }
