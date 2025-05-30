@@ -241,10 +241,10 @@ export class SubjectsService {
 
     // Lấy đầy đủ quan hệ
     return this.repo.createQueryBuilder('subject')
-      .leftJoinAndSelect('subject.classes', 'class')
-      .leftJoinAndSelect('subject.grades', 'grade')
-      .leftJoinAndSelect('subject.products', 'product')
-      .leftJoinAndSelect('subject.createdBy', 'createdBy')
+      // .leftJoinAndSelect('subject.classes', 'class')
+      // .leftJoinAndSelect('subject.grades', 'grade')
+      // .leftJoinAndSelect('subject.products', 'product')
+      // .leftJoinAndSelect('subject.createdBy', 'createdBy')
       .whereInIds(intersectionIds)
       .orderBy('subject.id', 'ASC')
       .getMany();

@@ -29,14 +29,14 @@ export class ProductService {
   ) { }
   async create(createProductDto: CreateProductDto, user: User) {
     const {
-      title,
+      // title,
       description,
       content,
       apply,
       origin,
       model,
       trademark,
-      code,
+      // code,
       images,
       grades, // Mảng grades
       subjects,
@@ -45,12 +45,9 @@ export class ProductService {
       typeParent,  // Thêm typeParent vào DTO
       categories,
     } = createProductDto;
-    // console.log('---- Debug input ----');
-    // console.log('grades:', grades, 'type:', typeof grades);
-    // console.log('subjects:', subjects, 'type:', typeof subjects);
-    // console.log('classes:', classes, 'type:', typeof classes);
-    // console.log('categories:', categories, 'type:', typeof categories);
-    // console.log('----------------------');
+    const title = createProductDto.title?.trim();
+    const code = createProductDto.code?.trim();
+
     const parseToArray = (value: any): number[] => {
       if (!value) return [];
 
@@ -140,7 +137,25 @@ export class ProductService {
     if (typeParentId && !newTypeParent) {
       throw new HttpException(`Không tìm thấy TypeParent với ID ${typeParentId}`, 404);
     }
+    // === Kiểm tra sản phẩm đã tồn tại hay chưa ===
+    const existingProduct = await this.repo.findOne({
+      where: {
+        title,
+        code,
+        typeParent: { id: typeParentId },
+        typeProduct: { id: typeProductId },
+      },
+      // relations: ['grades', 'classes', 'subjects', 'typeParent'],
+    });
+    // console.log(existingProduct)
+    if (existingProduct) {
+      // === Cập nhật nếu đã tồn tại ===
+      existingProduct.grades = newGrades;
+      existingProduct.classes = newClasses;
+      existingProduct.subjects = newSubjects;
 
+      return await this.repo.save(existingProduct);
+    }
     // === Tạo mới sản phẩm ===
     const product = this.repo.create({
       title,
@@ -253,27 +268,32 @@ export class ProductService {
       trademark,
       code,
       images,
-      grades,
-      subjects,
-      classes,
+      // grades,
+      // subjects,
+      // classes,
       typeProduct,
       typeParent,
-      categories,
+      // categories,
     } = updateProductDto;
-
+    // console.log(classes)
     const existingProduct = await this.repo.findOne({
       where: { id },
       relations: ['createdBy', 'grades', 'classes', 'subjects', 'typeProduct', 'typeParent', 'categories'],
     });
-
+    // console.log(existingProduct)
     if (!existingProduct) {
       throw new BadRequestException('Không tìm thấy sản phẩm này!');
     }
 
     // Xử lý grades
+    // console.log(grades)
+    const grades = this.parseStringArray(updateProductDto.grades)
+    // console.log(grades)
     if (grades && grades.length > 0) {
       const gradeIds = grades.map(id => parseInt(id));
+      // console.log(gradeIds)
       const newGrades = await this.gradeRepo.find({ where: { id: In(gradeIds) } });
+      // console.log(newGrades)
       if (newGrades.length !== gradeIds.length) {
         throw new BadRequestException('Một hoặc nhiều cấp học không tồn tại');
       }
@@ -281,6 +301,7 @@ export class ProductService {
     }
 
     // Xử lý subjects
+    const subjects = this.parseStringArray(updateProductDto.subjects)
     if (subjects && subjects.length > 0) {
       const subjectIds = subjects.map(id => parseInt(id));
       const newSubjects = await this.subjectRepo.find({ where: { id: In(subjectIds) } });
@@ -291,6 +312,8 @@ export class ProductService {
     }
 
     // Xử lý classes
+    // console.log(classes)
+    const classes = this.parseStringArray(updateProductDto.classes)
     if (classes && classes.length > 0) {
       const classIds = classes.map(id => parseInt(id));
       const newClasses = await this.classRepo.find({ where: { id: In(classIds) } });
@@ -299,7 +322,7 @@ export class ProductService {
       }
       existingProduct.classes = newClasses;
     }
-
+    // console.log(existingProduct.classes)
     // Xử lý typeProduct
     if (typeProduct) {
       const typeProductId = parseInt(typeProduct);
@@ -321,6 +344,7 @@ export class ProductService {
     }
 
     // Xử lý categories
+    const categories = this.parseStringArray(updateProductDto.categories)
     if (categories && categories.length > 0) {
       const categoryIds = Array.isArray(categories)
         ? categories.map(id => parseInt(id))
@@ -346,7 +370,8 @@ export class ProductService {
       images, // đã merge từ controller
     });
 
-    return await this.repo.save(existingProduct);
+    const savedProduct = await this.repo.save(existingProduct);
+    return savedProduct;
   }
   async filterProducts(pageOptions: PageOptionsDto, query: any): Promise<PageDto<Product>> {
     const queryBuilder = this.repo.createQueryBuilder('product')
@@ -395,10 +420,6 @@ export class ProductService {
       queryBuilder.andWhere('categories.id IS NOT NULL AND categories.id IN (:...categoryIds)', { categoryIds });
     }
 
-    // if (query.typeParentId) {
-    //   const typeParentIds = parseIds(query.typeParentId, 'type parent');
-    //   queryBuilder.andWhere('typeParent.id IS NOT NULL AND typeParent.id IN (:...typeParentIds)', { typeParentIds });
-    // }
     if (query.typeParentId) {
       const typeParentIds = parseIds(query.typeParentId, 'type parent');
       queryBuilder.innerJoin('product.typeParent', 'filterTypeParent', 'filterTypeParent.id IN (:...typeParentIds)', { typeParentIds });
@@ -424,7 +445,7 @@ export class ProductService {
     for (const product of items) {
       const fullProduct = await this.repo.findOne({
         where: { id: product.id },
-        relations: ['classes', 'subjects', 'typeProduct', 'categories', 'typeParent'],
+        relations: ['createdBy', 'classes', 'subjects', 'typeProduct', 'categories', 'typeParent'],
       });
 
       product.classes = fullProduct?.classes ?? [];
@@ -433,15 +454,6 @@ export class ProductService {
       product.categories = fullProduct?.categories ?? [];
       product.typeParent = fullProduct?.typeParent ?? null;
     }
-
-    // // Gắn lại đường dẫn ảnh đầy đủ
-    // const hostUrl = process.env.HOST_API_URL || '';
-    // const mappedEntities = items.map((product) => {
-    //   if (product.images && product.images.length > 0) {
-    //     product.images = product.images.map(image => `${hostUrl}/api/${image}`);
-    //   }
-    //   return product;
-    // });
 
     return new PageDto(items, pageMetaDto);
   }
@@ -474,28 +486,38 @@ export class ProductService {
   async importFromExcel(file: Express.Multer.File, user: User) {
     const workbook = xlsx.read(file.buffer, { type: 'buffer' });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows: any[] = xlsx.utils.sheet_to_json(sheet);
-    // console.log(rows)
-    for (const row of rows) {
+    const rows: any[] = xlsx.utils.sheet_to_json(sheet, {
+      defval: '', // giữ giá trị trống
+      raw: false,
+    });
+    const filteredRows = rows.filter(row => row['STT'] !== undefined && row['STT'] !== '');
+
+    for (const row of filteredRows) {
       const {
-        title,
-        description,
-        content,
-        apply,
-        origin,
-        model,
-        trademark,
-        code,
-        images,
-        typeProduct,
-        typeParent,
-        categories,
+        'Tên sản phẩm': title,
+        'Mã sản phẩm': code,
+        'Mô tả': description,
+        'Tiêu chuẩn kĩ thuật': content,
+        'Ứng dụng': apply,
+        'Nguồn gốc': origin,
+        'Model': model,
+        'Thương hiệu': trademark,
+        'Cấp học': gradesRaw,
+        'Lớp học': classesRaw,
+        'Môn học': subjectsRaw,
+        'Loại sản phẩm': typeProduct,
+        'Tài nguyên giáo dục': typeParent,
+        'Thông tư': categoriesRaw,
       } = row;
+      // console.log(typeParent, categoriesRaw)
+      // Grade
       const grades = [];
-      for (const gradeName of this.parseStringArray(row.grades)) {
+      for (const gradeName of this.parseStringArray(gradesRaw)) {
         const grade = await this.gradeRepo.findOne({ where: { name: gradeName } });
         if (grade) grades.push(grade);
       }
+
+      // Type Product
       let typeProductEntity = await this.typeProductRepo.findOne({
         where: {
           name: typeProduct,
@@ -504,7 +526,6 @@ export class ProductService {
         relations: ['grades', 'typeParent'],
       });
       if (!typeProductEntity) {
-        // Nếu chưa có, tạo mới với image mặc định
         const typeParentEntity = typeParent
           ? await this.typeParentRepo.findOne({ where: { name: typeParent } })
           : null;
@@ -517,7 +538,6 @@ export class ProductService {
         });
         await this.typeProductRepo.save(typeProductEntity);
       } else {
-        // Nếu đã có, cập nhật thêm grade nếu thiếu
         typeProductEntity.grades = typeProductEntity.grades || [];
         for (const grade of grades) {
           if (!typeProductEntity.grades.find(g => g.id === grade.id)) {
@@ -525,7 +545,6 @@ export class ProductService {
           }
         }
 
-        // Cập nhật typeParent nếu chưa có
         if (!typeProductEntity.typeParent && typeParent) {
           const typeParentEntity = await this.typeParentRepo.findOne({ where: { name: typeParent } });
           if (typeParentEntity) {
@@ -535,17 +554,22 @@ export class ProductService {
 
         await this.typeProductRepo.save(typeProductEntity);
       }
-      const typeParentEntity = (
-        typeParent ? await this.typeParentRepo.findOne({ where: { name: typeParent } }) : null
-      );
+
+      // Type Parent
+      // console.log(typeParent)
+      const typeParentEntity = typeParent
+        ? await this.typeParentRepo.findOne({ where: { name: typeParent } })
+        : null;
+      // console.log(typeParentEntity)
+      // Class
       const classes = [];
-      for (const className of this.parseStringArray(row.classes)) {
+      for (const className of this.parseStringArray(classesRaw)) {
         const classEntity = await this.classRepo.findOne({ where: { name: className } });
         if (classEntity) classes.push(classEntity);
       }
-      const subjects = this.parseStringArray(row.subjects)
-      // console.log(typeof(grades), typeof(classes), subjects, row.typeProduct)
-      // ======== Subjects ========
+
+      // Subject
+      const subjects = this.parseStringArray(subjectsRaw);
       const subjectEntities = [];
       for (const subjectName of subjects) {
         let subject = await this.subjectRepo.findOne({
@@ -559,7 +583,7 @@ export class ProductService {
           subject.grades = subject.grades || [];
           for (const grade of grades) {
             if (!subject.grades.find(g => g.id === grade.id)) {
-              subject.grades.push(grade)
+              subject.grades.push(grade);
             }
           }
           subject.classes = subject.classes || [];
@@ -572,8 +596,9 @@ export class ProductService {
         }
         subjectEntities.push(subject);
       }
-      const categoryNames = this.parseStringArray(categories);
 
+      // Categories
+      const categoryNames = this.parseStringArray(categoriesRaw);
       const newCategories = [];
       for (const categoryName of categoryNames) {
         const category = await this.categoryRepo.findOne({ where: { name: categoryName } });
@@ -581,7 +606,8 @@ export class ProductService {
           newCategories.push(category);
         }
       }
-      // Lấy tất cả sản phẩm trùng title, description, content, apply, origin, model, trademark, code
+
+      // Kiểm tra sản phẩm trùng
       const existingProducts = await this.repo.find({
         where: {
           title,
@@ -597,12 +623,13 @@ export class ProductService {
         },
         relations: ['grades', 'classes', 'subjects', 'categories', 'typeProduct'],
       });
-      // Hàm so sánh 2 mảng name đã sắp xếp
+
       const compareNameArrays = (a: { name: string }[], b: { name: string }[]) => {
         const namesA = a.map(e => e.name).sort();
         const namesB = b.map(e => e.name).sort();
         return namesA.length === namesB.length && namesA.every((val, idx) => val === namesB[idx]);
       };
+      // console.log(existingProducts)
       let isDuplicate = false;
       for (const product of existingProducts) {
         if (
@@ -617,9 +644,58 @@ export class ProductService {
       }
 
       if (isDuplicate) {
+        throw new BadRequestException('Sản phẩm đã được cập nhật, nhưng có lỗi cần xử lý thêm.');
         continue; // Bỏ qua sản phẩm trùng
       }
+      const existingProduct = await this.repo.findOne({
+        where: {
+          title,
+          code,
+          typeParent: { id: typeParentEntity.id },
+          typeProduct: { id: typeProductEntity.id },
+        },
+        relations: ['grades', 'classes', 'subjects', 'typeParent'],
+      });
+      // console.log(existingProduct)
+      if (existingProduct) {
+        // === Cập nhật nếu đã tồn tại ===
+        existingProduct.grades = grades;
+        existingProduct.classes = classes;
+        existingProduct.subjects = subjectEntities;
 
+        return  await this.repo.save(existingProduct);
+      }
+
+      const image = [];
+      switch (typeProductEntity.name) {
+        case 'Tranh giấy, Tranh nhựa':
+          image.push('public/product/image/default1.jpg');
+          break;
+        case 'Video':
+          image.push('public/product/image/default2.jpg');
+          break;
+        case 'Thiết bị tối thiểu':
+          image.push('public/product/image/default3.jpg');
+          break;
+        case 'Thiết bị nghe nhìn':
+          image.push('public/product/image/default4.jpg');
+          break;
+        case 'Học liệu điện tử':
+          image.push('public/product/image/default5.jpg');
+          break;
+        case 'Thiết bị cơ bản':
+          image.push('public/product/image/default6.jpg');
+          break;
+        case 'Thiết bị khác':
+          image.push('public/product/image/default7.jpg');
+          break;
+        case 'Thiết bị dùng chung':
+          image.push('public/product/image/default8.jpg');
+          break;
+        default:
+          image.push('public/product/image/default.jpg');
+          break;
+      }
       const newProduct = this.repo.create({
         title,
         description,
@@ -629,7 +705,7 @@ export class ProductService {
         model,
         trademark,
         code,
-        images: ['public/product/image/default.png'],
+        images: image,
         subjects: subjectEntities,
         grades,
         classes,
@@ -640,8 +716,8 @@ export class ProductService {
       });
 
       await this.repo.save(newProduct);
-
     }
+
     return { message: 'Import thành công' };
   }
   parseStringArray(value: any): string[] {

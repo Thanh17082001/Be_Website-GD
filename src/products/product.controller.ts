@@ -55,8 +55,8 @@ export class ProductController {
   }
 
   @Post('import-excel')
-  // @Public()
-  @Roles(Role.ADMIN)
+  @Public()
+  // @Roles(Role.ADMIN)
   @UseInterceptors(FileInterceptor('products'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -71,10 +71,8 @@ export class ProductController {
     },
   })
   async importExcel(@UploadedFile() file: Express.Multer.File, @Req() request: Request) {
-    // ✅ Gọi hàm xử lý bên service
-    const user = request['user'] ?? null;
     // console.log(file)
-    // console.log(user)
+    const user = request['user'] ?? null;
     return this.productService.importFromExcel(file, user);
   }
 

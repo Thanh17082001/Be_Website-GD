@@ -33,7 +33,7 @@ export class GradeController {
 
   @Get()
   @Public()
-  async findAll(@Query() pageOptionDto: PageOptionsDto, @Query() query: Partial<Grade>, @Req() request: Request) {
+  async findAll(@Query() pageOptionDto: PageOptionsDto, @Query() query: Partial<Grade>) {
     // console.log('1')
     // const user = request['user'] ?? null;
     return this.gradeService.findAll(pageOptionDto, query);
@@ -44,13 +44,13 @@ export class GradeController {
   async filterByTypeParentAndGrade(
     @Query('typeParentId', ParseIntPipe) typeParentId: number,
     @Query('gradeId', ParseIntPipe) gradeId: number,
-    @Query() pageOptions: PageOptionsDto,
   ) {
-    return this.gradeService.filterByTypeParentAndGrade(pageOptions, typeParentId, gradeId);
+    return this.gradeService.filterByTypeParentAndGrade( typeParentId, gradeId);
   }
   
   @Get(':id')
-  @Roles(Role.ADMIN)
+  // @Roles(Role.ADMIN)
+  @Public()
   findOne(@Param('id') id: string) {
     return this.gradeService.findOne(+id);
   }

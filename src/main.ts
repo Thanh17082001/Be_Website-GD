@@ -22,7 +22,7 @@ async function bootstrap() {
 
 
   //middleware block static file
-  app.use('/public', new StaticFilesMiddleware().use);
+  // app.use('/public', new StaticFilesMiddleware().use);
 
   // static file
   app.use(express.static(join(__dirname, '..', '..')));
