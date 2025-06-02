@@ -24,6 +24,31 @@ async function bootstrap() {
   //middleware block static file
   // app.use('/public', new StaticFilesMiddleware().use);
 
+  // Cấu hình CORS
+  // const allowedDomains = await domainsService.findAll();
+  const allowedOrigins = ['http://localhost:3000',]
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      console.log(origin);
+      if (!origin || allowedOrigins.includes(origin) || origin.includes('localhost')) {
+        console.log('qua mid này');
+        callback(null, true);
+      } else {
+        console.log('chưa qua');
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+  });
+
+  // Tạo middleware và inject DomainsService vào
+
+  const staticFile = new StaticFilesMiddleware()
+
+
+  app.use('/api/public', staticFile.use);
+
   // static file
   app.use(express.static(join(__dirname, '..', '..')));
   app.use(express.json({ limit: '1024mb' }));
@@ -83,6 +108,7 @@ async function bootstrap() {
   const PORT = configService.get<number>('PORT') || 3000;
   await app.listen(PORT, () => {
     console.log(`Server is  running at http://localhost:${PORT}/api`);
+
   });
 
   const dataSource = app.get(DataSource);

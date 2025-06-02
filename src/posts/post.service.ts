@@ -22,7 +22,7 @@ export class PostService {
       content: content,
       images: images,
       description: description,
-      createdBy: user.isAdmin ? user : null
+      createdBy: user?.isAdmin ? user : null
     })
     return post
   }
