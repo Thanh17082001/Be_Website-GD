@@ -15,6 +15,9 @@ import { TypeProduct } from 'src/type-products/entities/type-product.entity';
 import { Category } from 'src/categories/entities/category.entity';
 import { TypeParent } from 'src/type-parents/entities/type-parent.entity';
 import * as xlsx from 'xlsx';
+const path = require('path');
+const fs = require('fs');
+const sharp = require('sharp');
 
 @Injectable()
 export class ProductService {
@@ -27,6 +30,65 @@ export class ProductService {
     @InjectRepository(Category) private categoryRepo: Repository<Category>,
     @InjectRepository(TypeParent) private typeParentRepo: Repository<TypeParent>,
   ) { }
+  async generateThumbnailsForExistingProducts() {
+  const products = await this.repo.find({
+    select: ['id', 'images', 'thumbnails']
+  });
+
+  const projectRoot = path.join(__dirname, '..', '..'); // root project
+
+  for (const product of products) {
+    if (!product.images || product.images.length === 0) continue;
+
+    const thumbnails: string[] = [];
+
+    for (const imageRelPathRaw of product.images) {
+      // Loại bỏ 'public/' nếu có
+      const imageRelPath = imageRelPathRaw.startsWith('public/')
+        ? imageRelPathRaw.slice('public/'.length)
+        : imageRelPathRaw;
+
+      const imagePath = path.join(projectRoot, 'public', imageRelPath);
+
+      if (!fs.existsSync(imagePath)) {
+        console.warn(`⚠️ Image file does not exist for product ${product.id}: ${imagePath}`);
+        continue;
+      }
+
+      const parsed = path.parse(imageRelPath);
+      const thumbName = parsed.name + '_thumb' + parsed.ext;
+
+      // Dùng path.posix.join để path có dấu '/' dù trên Windows
+      const thumbRelPath = path.posix.join(parsed.dir, thumbName);
+
+      const thumbPath = path.join(projectRoot, 'public', parsed.dir, thumbName);
+
+      if (!fs.existsSync(thumbPath)) {
+        try {
+          await sharp(imagePath)
+            .resize(300, 300).crop(sharp.gravity.center)
+            .jpeg({ quality: 70 })
+            .toFile(thumbPath);
+          console.log(`✅ Created thumbnail: ${thumbPath}`);
+        } catch (err) {
+          console.error(`❌ Error creating thumbnail for ${imagePath}:`, err);
+          continue;
+        }
+      }
+
+      thumbnails.push(`public/${thumbRelPath}`); // thêm public/ prefix và đảm bảo dấu '/'
+    }
+
+    const uniqueThumbnails = Array.from(new Set(thumbnails));
+    if (JSON.stringify(product.thumbnails || []) !== JSON.stringify(uniqueThumbnails)) {
+      product.thumbnails = uniqueThumbnails;
+      await this.repo.save(product);
+      console.log(`🔄 Updated thumbnails for product ${product.id}`);
+    }
+  }
+
+  console.log('🎉 All thumbnails generated and saved!');
+}
   async create(createProductDto: CreateProductDto, user: User) {
     const {
       // title,
@@ -167,6 +229,7 @@ export class ProductService {
       trademark,
       code,
       images,  // Mảng hình ảnh
+      thumbnails: createProductDto['thumbnails'],
       grades: newGrades,  // Lưu grades
       classes: newClasses,
       subjects: newSubjects,
@@ -268,14 +331,12 @@ export class ProductService {
       trademark,
       code,
       images,
-      // grades,
-      // subjects,
-      // classes,
       typeProduct,
       typeParent,
+      thumbnails
       // categories,
     } = updateProductDto;
-    // console.log(classes)
+    console.log(typeProduct,images.length)
     const existingProduct = await this.repo.findOne({
       where: { id },
       relations: ['createdBy', 'grades', 'classes', 'subjects', 'typeProduct', 'typeParent', 'categories'],
@@ -356,7 +417,50 @@ export class ProductService {
       }
       existingProduct.categories = newCategories;
     }
-
+    if(images.length === 0) {
+      switch (existingProduct.typeProduct.name) {
+        case 'Tranh giấy, Tranh nhựa':
+          images.push('public/product/image/default1.jpg');
+          thumbnails.push('public/product/image/default1_thumb.jpg');
+          break;
+        case 'Video':
+          images.push('public/product/image/default2.jpg');
+          thumbnails.push('public/product/image/default2_thumb.jpg');
+          break;
+        case 'Thiết bị tối thiểu':
+          images.push('public/product/image/default3.jpg');
+          thumbnails.push('public/product/image/default3_thumb.jpg');
+          break;
+        case 'Thiết bị nghe nhìn':
+          images.push('public/product/image/default4.jpg');
+          thumbnails.push('public/product/image/default4_thumb.jpg');
+          break;
+        case 'Học liệu điện tử':
+          images.push('public/product/image/default5.jpg');
+          thumbnails.push('public/product/image/default5_thumb.jpg');
+          break;
+        case 'Thiết bị cơ bản':
+          images.push('public/product/image/default6.jpg');
+          thumbnails.push('public/product/image/default6_thumb.jpg');
+          break;
+        case 'Thiết bị khác':
+          images.push('public/product/image/default7.jpg');
+          thumbnails.push('public/product/image/default7_thumb.jpg');
+          break;
+        case 'Thiết bị dùng chung':
+          images.push('public/product/image/default8.jpg');
+          thumbnails.push('public/product/image/default8_thumb.jpg');
+          break;
+          case 'Phần mềm 3D':
+          images.push('public/product/image/default9.jpg');
+          thumbnails.push('public/product/image/default9_thumb.jpg');
+          break;
+        default:
+          images.push('public/product/image/default.jpg');
+          thumbnails.push('public/product/image/default_thumb.jpg');          
+          break;
+      }
+    }
     // Cập nhật các trường còn lại
     this.repo.merge(existingProduct, {
       title,
@@ -367,7 +471,8 @@ export class ProductService {
       model,
       trademark,
       code,
-      images, // đã merge từ controller
+      images,
+      thumbnails,
     });
 
     const savedProduct = await this.repo.save(existingProduct);
@@ -663,7 +768,7 @@ export class ProductService {
         existingProduct.classes = classes;
         existingProduct.subjects = subjectEntities;
 
-        return  await this.repo.save(existingProduct);
+        return await this.repo.save(existingProduct);
       }
 
       const image = [];

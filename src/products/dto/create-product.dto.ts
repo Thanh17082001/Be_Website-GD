@@ -40,6 +40,8 @@ export class CreateProductDto extends OmitType(BaseDto,[] as const){
   // @IsArray()
   images?: string[];
 
+  // thumbnails?: string[];
+
   @ApiProperty({ type: [String], required: false })
   @IsOptional()
   @IsString({ each: true })

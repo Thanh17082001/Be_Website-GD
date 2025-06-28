@@ -14,31 +14,36 @@ import { Public } from 'src/common/decorators/customize.decorator';
 import { PageOptionsDto } from 'src/common/pagination/page-option-dto';
 import { ImportFileExcelUser } from './dto/import-excel.dto';
 import { RoleGuard } from 'src/role/role.guard';
+const path = require('path');
+import { generateThumbnail } from 'src/utils/image';
+import { InjectRepository } from '@nestjs/typeorm';
+import { TypeProduct } from 'src/type-products/entities/type-product.entity';
+import { Repository } from 'typeorm';
+const fs = require('fs');
+const sharp = require('sharp');
 
 @Controller('products')
 @UseGuards(AuthGuard, RoleGuard)
 export class ProductController {
-  constructor(private readonly productService: ProductService) { }
+  constructor(private readonly productService: ProductService, @InjectRepository(TypeProduct) private typeProductRepo: Repository<TypeProduct>,) { }
 
   @Post()
   @Roles(Role.ADMIN)
-  // @Public()
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FilesInterceptor('images', 10, {
       storage: storage('product', true),
-      ...multerOptions
-    })
+      ...multerOptions,
+    }),
   )
   async create(
     @Body() createProductDto: CreateProductDto,
     @Req() request: Request,
     @UploadedFiles() files: Express.Multer.File[],
-
   ) {
-    // console.log(files)
     const user: User = request['user'];
-    // Parse chuỗi thành mảng
+
+    // Parse các field dạng JSON
     ['subjects', 'classes', 'categories', 'grades'].forEach((field) => {
       if (typeof createProductDto[field] === 'string') {
         try {
@@ -48,10 +53,82 @@ export class ProductController {
         }
       }
     });
-    createProductDto.images = files.map(file => `public/product/image/${file.filename}`);
-    // console.log(createProductDto)
+
+    // Xử lý ảnh và thumbnail
+    const imagePaths: string[] = [];
+    const thumbnailPaths: string[] = [];
+
+    if (files && files.length > 0) {
+      for (const file of files) {
+        const fullImagePath = `public/product/image/${file.filename}`;
+        const fullImageAbsolutePath = file.path; // Đường dẫn tuyệt đối
+        // console.log(fullImageAbsolutePath)
+        const thumbAbsolutePath = await generateThumbnail(fullImageAbsolutePath);
+        const thumbRelativePath = fullImagePath.replace(file.filename, path.basename(thumbAbsolutePath));
+
+        imagePaths.push(fullImagePath);
+        thumbnailPaths.push(thumbRelativePath);
+      }
+    } else {
+      const { typeProduct } = createProductDto
+      const typeProductId = typeProduct ? parseInt(typeProduct) : null;
+      const newTypeProduct = typeProductId
+        ? await this.typeProductRepo.findOne({ where: { id: typeProductId } })
+        : null;
+      // console.log(newTypeProduct)
+      switch (newTypeProduct.name) {
+        case 'Tranh giấy, Tranh nhựa':
+          imagePaths.push('public/product/image/default1.jpg');
+          thumbnailPaths.push('public/product/image/default1_thumb.jpg');
+          break;
+        case 'Video':
+          imagePaths.push('public/product/image/default2.jpg');
+          thumbnailPaths.push('public/product/image/default2_thumb.jpg');
+          break;
+        case 'Thiết bị tối thiểu':
+          imagePaths.push('public/product/image/default3.jpg');
+          thumbnailPaths.push('public/product/image/default3_thumb.jpg');
+          break;
+        case 'Thiết bị nghe nhìn':
+          imagePaths.push('public/product/image/default4.jpg');
+          thumbnailPaths.push('public/product/image/default4_thumb.jpg');
+          break;
+        case 'Học liệu điện tử':
+          imagePaths.push('public/product/image/default5.jpg');
+          thumbnailPaths.push('public/product/image/default5_thumb.jpg');
+          break;
+        case 'Thiết bị cơ bản':
+          imagePaths.push('public/product/image/default6.jpg');
+          thumbnailPaths.push('public/product/image/default6_thumb.jpg');
+          break;
+        case 'Thiết bị khác':
+          imagePaths.push('public/product/image/default7.jpg');
+          thumbnailPaths.push('public/product/image/default7_thumb.jpg');
+          break;
+        case 'Thiết bị dùng chung':
+          imagePaths.push('public/product/image/default8.jpg');
+          thumbnailPaths.push('public/product/image/default8_thumb.jpg');
+          break;
+          case 'Phần mềm 3D':
+          imagePaths.push('public/product/image/default9.jpg');
+          thumbnailPaths.push('public/product/image/default9_thumb.jpg');
+          break;
+        default:
+          imagePaths.push('public/product/image/default.jpg');
+          thumbnailPaths.push('public/product/image/default_thumb.jpg');          
+          break;
+      }
+    }
+
+    createProductDto.images = imagePaths;
+    createProductDto['thumbnails'] = thumbnailPaths;
 
     return await this.productService.create(createProductDto, user);
+  }
+  @Get('testthubnail')
+  @Public()
+  async test() {
+    return await this.productService.generateThumbnailsForExistingProducts()
   }
 
   @Post('import-excel')
@@ -114,10 +191,10 @@ export class ProductController {
     if (!existingProduct) {
       throw new Error('Product not found');
     }
-
-    // Parse fields nếu là JSON string
+    // Parse các field dạng JSON
     const fieldsToParse = ['subjects', 'classes', 'categories', 'grades'];
     fieldsToParse.forEach(field => {
+      // console.log(updateProductDto[field])
       if (typeof updateProductDto[field] === 'string') {
         try {
           updateProductDto[field] = JSON.parse(updateProductDto[field]);
@@ -129,7 +206,7 @@ export class ProductController {
       }
     });
 
-    // Parse lại images giữ lại từ client (nếu có)
+    // Parse lại ảnh cũ giữ lại
     let oldImages: string[] = [];
     if (typeof updateProductDto.images === 'string') {
       try {
@@ -140,18 +217,51 @@ export class ProductController {
     } else if (Array.isArray(updateProductDto.images)) {
       oldImages = updateProductDto.images;
     }
-
-    // Nếu có ảnh mới => thêm vào cuối danh sách
+    // console.log(updateProductDto.images)
+    // Ảnh mới upload
     const newUploadedImages = (files || []).map(file => `public/product/image/${file.filename}`);
 
-    // Merge ảnh cũ (người dùng giữ lại) + ảnh mới
-    updateProductDto.images = [...oldImages, ...newUploadedImages];
+    // Gộp ảnh cũ + mới
+    const allImages = [...oldImages, ...newUploadedImages];
+    updateProductDto.images = allImages;
 
-    // Gọi service
+    // === TẠO THUMBNAIL ===
+    const publicFolder = path.join(__dirname, '..', '..', 'public');
+    const thumbnails: string[] = [];
+
+    for (const imageRelPath of allImages) {
+      const rel = imageRelPath.startsWith('public/') ? imageRelPath.slice(7) : imageRelPath;
+      const imagePath = path.join(publicFolder, rel);
+      // console.log(imagePath)
+      if (!fs.existsSync(imagePath)) {
+        console.warn(`⚠️ Image file does not exist: ${imagePath}`);
+        continue;
+      }
+
+      const parsed = path.parse(rel);
+      const thumbName = parsed.name + '_thumb' + parsed.ext;
+      const thumbRelPath = path.join(parsed.dir, thumbName);
+      const thumbPath = path.join(publicFolder, thumbRelPath);
+
+      // Tạo nếu chưa tồn tại
+      if (!fs.existsSync(thumbPath)) {
+        try {
+          await sharp(imagePath).resize(300).jpeg({ quality: 70 }).toFile(thumbPath);
+          console.log(`✅ Created thumbnail: ${thumbPath}`);
+        } catch (err) {
+          console.error(`❌ Failed to create thumbnail for ${imagePath}:`, err);
+          continue;
+        }
+      }
+
+      thumbnails.push(`public/${thumbRelPath.replace(/\\/g, '/')}`); // normalize path
+    }
+
+    updateProductDto.thumbnails = thumbnails;
+
+    // Cập nhật
     return this.productService.update(+id, updateProductDto);
   }
-
-
 
   @Delete(':id')
   @Roles(Role.ADMIN)

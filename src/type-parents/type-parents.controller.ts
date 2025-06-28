@@ -32,11 +32,24 @@ export class TypeParentsController {
   ) {
     return this.typeParentsService.findAll(pageOptionDto, query);
   }
+  @Get('findall')
+  @Public()
+  findAllNew(
+    @Query() pageOptionDto: PageOptionsDto,
+    @Query() query: Partial<TypeParent>,
+  ) {
+    return this.typeParentsService.findAllNew(pageOptionDto, query);
+  }
 
   @Get(':id')
   @Public()
   findOne(@Param('id') id: string) {
     return this.typeParentsService.findOne(+id);
+  }
+  @Get('findgradebytp/:id')
+  @Public()
+  findGradeByTP(@Param('id') id: string) {
+    return this.typeParentsService.findGradeByTP(+id);
   }
   @Patch(':id')
   @Roles(Role.ADMIN)

@@ -35,6 +35,9 @@ export class Product extends BaseWithCreatedBy {
     @Column()
     code: string
 
+    @Column('text', { array: true, nullable: true })
+    thumbnails: string[];
+
     @Column('text', { array: true })
     images: string[];
 

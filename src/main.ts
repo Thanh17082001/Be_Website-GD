@@ -22,32 +22,32 @@ async function bootstrap() {
 
 
   //middleware block static file
-  // app.use('/public', new StaticFilesMiddleware().use);
+  app.use('/public', new StaticFilesMiddleware().use);
 
   // Cấu hình CORS
   // const allowedDomains = await domainsService.findAll();
-  const allowedOrigins = ['http://localhost:3000',]
+  // const allowedOrigins = ['https://gdgroup.vn/', 'https://admin.gdgroup.vn/', 'https://gdgroup.vn', 'https://admin.gdgroup.vn']
 
-  app.enableCors({
-    origin: (origin, callback) => {
-      console.log(origin);
-      if (!origin || allowedOrigins.includes(origin) || origin.includes('localhost')) {
-        console.log('qua mid này');
-        callback(null, true);
-      } else {
-        console.log('chưa qua');
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
-  });
+  // app.enableCors({
+  //   origin: (origin, callback) => {
+  //     console.log(origin);
+  //     if (!origin || allowedOrigins.includes(origin) || origin.includes('localhost')) {
+  //       console.log('qua mid này');
+  //       callback(null, true);
+  //     } else {
+  //       console.log('chưa qua');
+  //       callback(new Error('Not allowed by CORS'));
+  //     }
+  //   },
+  //   credentials: true,
+  // });
 
-  // Tạo middleware và inject DomainsService vào
+  // // Tạo middleware và inject DomainsService vào
 
-  const staticFile = new StaticFilesMiddleware()
+  // const staticFile = new StaticFilesMiddleware()
 
 
-  app.use('/api/public', staticFile.use);
+  // app.use('/api/public', staticFile.use);
 
   // static file
   app.use(express.static(join(__dirname, '..', '..')));

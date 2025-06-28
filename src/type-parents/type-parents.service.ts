@@ -96,10 +96,63 @@ export class TypeParentsService {
 
     return new PageDto(entities, pageMetaDto);
   }
+  async findAllNew(pageOptions: PageOptionsDto, query: Partial<TypeParent>) {
+    const queryBuilder = this.repo.createQueryBuilder('typeparent')
+      .leftJoinAndSelect('typeparent.grades', 'grades')  // Lấy thông tin grades
+
+    const { page, limit, skip, order, search } = pageOptions;
+    const paginationKeys = ['page', 'limit', 'skip', 'order', 'search'];
+
+    // Lọc các điều kiện query
+    if (query && Object.keys(query).length > 0) {
+      const arrayQuery = Object.keys(query);
+      arrayQuery.forEach((key) => {
+        if (key && !paginationKeys.includes(key)) {
+          queryBuilder.andWhere(`typeparent.${key} = :${key}`, {
+            [key]: query[key],
+          });
+        }
+      });
+    }
+
+    // Tìm kiếm theo tên (hoặc bất kỳ thuộc tính nào khác của TypeParent)
+    if (search) {
+      queryBuilder.andWhere(`LOWER(unaccent(typeparent.name)) ILIKE LOWER(unaccent(:search))`, {
+        search: `%${search}%`,
+      });
+    }
+
+    // Sắp xếp, phân trang
+    queryBuilder
+      .orderBy(`typeparent.createdAt`, order)
+      .skip(skip)
+      .take(limit);
+
+    // Tính số lượng item
+    const itemCount = await queryBuilder.getCount();
+    const pageMetaDto = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
+
+    // Lấy các entities
+    const entities = await queryBuilder.getMany();
+
+    return new PageDto(entities, pageMetaDto);
+  }
   async findOne(id: number): Promise<TypeParent> {
     const typeParent = await this.repo.findOne({
       where: { id },
       relations: ['createdBy', 'grades', 'products', 'typeProducts'],  // Lấy thông tin createdBy và grades
+    });
+
+    if (!typeParent) {
+      throw new NotFoundException(`Không tìm thấy loại (Type-Parents) với ID: ${id}`);
+    }
+
+    return typeParent;
+  }
+  async findGradeByTP(id: number): Promise<TypeParent> {
+    const typeParent = await this.repo.findOne({
+      where: { id },
+      relations: ['grades'],  // Lấy thông tin createdBy và grades
     });
 
     if (!typeParent) {
